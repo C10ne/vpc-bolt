@@ -1,0 +1,101 @@
+OK, so, next thing is to make templates and other elements more modular and easier to define.
+Template definitions should be simple, and all the user adjustments should be easily storable in database. As well as template/section/component structure.
+So, we need something simple and structured to define our elements.
+I'll provide some examples:
+
+## Section:
+
+```
+heroSection {
+	prop components: Component[];
+	prop lockStatuses: LockStatus[];
+	definition = {
+		id: uuid4(),
+		type: "hero-section",
+		layout: "hero.tsx",
+		styles: ["sections/hero.scss"],	// Can be multiple
+		displayName: "Hero section",
+		componentSlots: [	// Component slots define how many and which components can be added
+			{
+				id: uuid(),
+				allowedComponentTypes: ['hero'],
+				lockStatuses: LockStatus[],
+			}
+		]
+	}
+	editableProperties = {
+		padding: [top, right, bottom, left] | [vertical, horizontal] | 0,
+		margin: [top, right, bottom, left] | [vertical, horizontal] | 0,
+	}
+}
+```
+
+
+## Component
+
+```
+heroImage {
+	prop lockStatuses: LockStatus[];
+	definition = {
+		id:string = uuidv4();
+		type: ComponentType = 'hero';
+		displayName: "Top banner image";
+		layout: 'layouts/hero-image.tsx';
+		styles: ['hero-image.scss', '../global/images.scss'];
+	}
+	editableContent = {
+		title: 'Transform Your Business Online',
+		subtitle: 'Create a professional website that converts visitors into customers.',
+		buttonText: 'Get Started',
+		buttonLink?: '',
+		linkToSection?: '',
+		backgroundImage: 'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1400&h=600&q=80',
+		generic: Record<string, any>
+	};
+	editableStyle = {
+		backgroundColor?: string;
+		buttonStyle?: 'primary' | 'secondary' | 'accent'
+		padding?: {
+			vertical: number;
+			horizontal: number;
+		};
+    		[key: string]: any;
+	}
+}
+```
+
+
+## Template
+template {
+	definition = {
+		id: 'business',
+		name: 'Business Template',
+		description: 'Professional template with 5 sections',
+		thumbnail: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=400&h=225&q=80',
+		layout: 'layout.tsx',
+		styles: ['../global/bootstrap.scss', '../../colors.scss', 'css/dark.css']
+	}
+
+	editableProperties = {
+		logo: 'https://via.placeholder.com/120x40',
+		businessName: 'Lalalo",
+		address: 'Default fake address',
+		socialLinks: [
+			fb: '',
+			x: ''
+			]
+	}
+	editableStyles = {
+		colorScheme: {
+			primary: '#4361ee',
+			secondary: '#3f37c9',
+			accent: '#4cc9f0',
+		},
+		typography: {
+			fontFamily: 'Inter, sans-serif',
+			headingFont: 'Inter, sans-serif',
+			bodyFont: 'Inter, sans-serif',
+		}
+	}
+}
+<header components="header-simple" lock-status="locked" selectable="no" />
