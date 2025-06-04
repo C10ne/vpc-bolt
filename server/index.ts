@@ -56,13 +56,9 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Use port 12000 for external access
-  const port = process.env.PORT || 12000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  // Use port 3000 for development
+  const port = process.env.PORT || 3000;
+  server.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();
