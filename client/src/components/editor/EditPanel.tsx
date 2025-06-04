@@ -61,6 +61,7 @@ export default function EditPanel() {
       // Immediate update to context to make changes reflect in real-time
       updateSection(section.id, {
         properties: {
+          ...section.properties,
           [property]: value
         }
       });
@@ -214,7 +215,7 @@ export default function EditPanel() {
         {section?.allowedComponents && section.allowedComponents.length > 0 && (
           <ComponentOptions 
             section={section}
-            selectedComponent={component}
+            selectedComponent={component || null}
           />
         )}
 
@@ -401,7 +402,7 @@ export default function EditPanel() {
                         ...localComponent!,
                         styleOptions: {
                           ...localComponent!.styleOptions,
-                          buttonStyle: value as "primary" | "secondary" | "outline" | "ghost"
+                          buttonStyle: value as "primary" | "secondary" | "outline"
                         }
                       });
 
@@ -410,7 +411,7 @@ export default function EditPanel() {
                         updateComponent(selectedSection, component.id, {
                           styleOptions: {
                             ...component.styleOptions,
-                            buttonStyle: value as "primary" | "secondary" | "outline" | "ghost"
+                            buttonStyle: value as "primary" | "secondary" | "outline"
                           }
                         });
                         console.log(`Updated button style: ${value}`);

@@ -14,6 +14,9 @@ export type ComponentType =
   | 'footer'
   | 'element-container'; // New type for Element-based components
 
+// Device types for responsive preview
+export type DeviceType = 'desktop' | 'tablet' | 'mobile';
+
 // Global settings for templates
 export interface GlobalSettings {
   title: string;

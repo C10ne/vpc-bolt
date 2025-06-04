@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Template, Section, Element } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import SectionControls from "./controls/SectionControls";
-import * as SectionComponents from "./sections";
+import SectionComponent from "./editor/SectionComponent";
 import { useToast } from "@/hooks/use-toast";
 
 interface EditorPanelProps {
@@ -122,16 +121,6 @@ export default function EditorPanel({
   };
 
   const renderSection = (section: Section) => {
-    // Get the component for this section type
-    const SectionComponent = (SectionComponents as any)[section.type];
-    
-    if (!SectionComponent) {
-      return (
-        <div className="p-4 bg-red-100 text-red-800 rounded">
-          Unknown section type: {section.type}
-        </div>
-      );
-    }
 
     return (
       <div
@@ -150,19 +139,11 @@ export default function EditorPanel({
         onDragOver={(e) => handleDragOver(e, template.sections.indexOf(section))}
         onDrop={(e) => handleDrop(e, template.sections.indexOf(section))}
       >
-        <SectionControls
-          section={section}
-          onUpdate={(updatedSection) => updateSection(section.id, updatedSection)}
-          onDelete={() => deleteSection(section.id)}
-          onMoveUp={() => moveSectionUp(section.id)}
-          onMoveDown={() => moveSectionDown(section.id)}
-        />
+        {/* Section controls placeholder */}
         
         <SectionComponent 
           section={section}
-          onUpdate={(updatedSection) => updateSection(section.id, updatedSection)}
-          selectedElementId={selectedElementId}
-          onSelectElement={onSelectElement}
+          index={template.sections.indexOf(section)}
         />
         
         {isDraggingOver === template.sections.indexOf(section) && (

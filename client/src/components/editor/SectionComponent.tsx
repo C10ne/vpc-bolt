@@ -301,7 +301,7 @@ const handleInlineEditComplete = (component: any, key: string) => {
                 }
               }}
             >
-              {component.content.features.map((feature, i) => (
+              {component.content.features?.map((feature, i) => (
                 <div key={i} className="feature-item p-4 border rounded-lg shadow-sm bg-white">
                   <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                     <span className="material-icons text-primary">{feature.icon}</span>
@@ -338,7 +338,7 @@ const handleInlineEditComplete = (component: any, key: string) => {
               }}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {component.content.testimonials.map((testimonial, i) => (
+                {component.content.testimonials?.map((testimonial, i) => (
                   <div key={i} className="testimonial-item p-6 border rounded-lg shadow-sm bg-white">
                     <div className="flex items-center mb-4">
                       <img 
@@ -448,7 +448,7 @@ const handleInlineEditComplete = (component: any, key: string) => {
                 <div>
                   <h4 className="font-semibold mb-4">{component.content.services.title}</h4>
                   <ul className="space-y-2 text-gray-400">
-                    {component.content.services.items.map((item, i) => (
+                    {component.content.services.items.map((item: string, i: number) => (
                       <li key={i}>{item}</li>
                     ))}
                   </ul>
@@ -456,7 +456,7 @@ const handleInlineEditComplete = (component: any, key: string) => {
                 <div>
                   <h4 className="font-semibold mb-4">{component.content.company.title}</h4>
                   <ul className="space-y-2 text-gray-400">
-                    {component.content.company.items.map((item, i) => (
+                    {component.content.company.items.map((item: string, i: number) => (
                       <li key={i}>{item}</li>
                     ))}
                   </ul>
@@ -464,7 +464,7 @@ const handleInlineEditComplete = (component: any, key: string) => {
                 <div>
                   <h4 className="font-semibold mb-4">{component.content.connect.title}</h4>
                   <div className="flex space-x-4 mb-4">
-                    {component.content.connect.social.map((social, i) => (
+                    {component.content.connect.social.map((social: string, i: number) => (
                       <a key={i} href="#" className="text-gray-400 hover:text-white">
                         <span className="material-icons">{social}</span>
                       </a>
