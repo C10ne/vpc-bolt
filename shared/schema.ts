@@ -42,7 +42,8 @@ export type ComponentType =
   | "Testimonial" 
   | "Footer"
   | "RichTextComponent"
-  | "ButtonComponent";
+  | "ButtonComponent"
+  | "element-container"; // Added
 
 // Section types
 export type SectionType = 
@@ -50,7 +51,8 @@ export type SectionType =
   | "HeroSection" 
   | "FeaturedProductsSection" 
   | "TestimonialsSection" 
-  | "FooterSection";
+  | "FooterSection"
+  | "BasicSection";          // Added
 
 // Editability status
 export type EditableType =
@@ -111,7 +113,7 @@ export const insertProjectSchema = createInsertSchema(projects).pick({
 // Type definitions for elements, components, sections, and templates
 
 export interface Element {
-  id: number;
+  id: string; // Changed to string for UUIDs
   type: ElementType;
   // properties will hold specific attributes based on ElementType. For example:
   // For Heading: { text: string; level: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'; }
@@ -124,7 +126,7 @@ export interface Element {
 }
 
 export interface Component {
-  id: number;
+  id: string; // Changed to string for UUIDs
   type: ComponentType;
   editable: EditableType;
   elements: Element[];
@@ -133,7 +135,7 @@ export interface Component {
 }
 
 export interface Section {
-  id: number;
+  id: string; // Changed to string for UUIDs
   type: SectionType;
   name: string;
   editable: EditableType;

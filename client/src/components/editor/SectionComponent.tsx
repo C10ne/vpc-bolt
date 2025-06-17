@@ -106,8 +106,8 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
         // Select section only if clicking on the section itself (not its children like components)
         // and not in preview mode
         if (!previewMode && sectionRef.current && e.target === sectionRef.current) {
-          // Pass section.id as string and the DOM node
-          selectSection(section.id.toString(), sectionRef.current);
+          // section.id is now string
+          selectSection(section.id, sectionRef.current);
         }
       }}
     >
@@ -119,9 +119,9 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
             className="h-7 w-7"
             title="Edit Section"
             onClick={(e) => {
-              e.stopPropagation(); // Prevent section deselection or re-selection with potentially null node
-              // Ensure section is selected with its DOM node for inspector context
-              selectSection(section.id.toString(), sectionRef.current);
+              e.stopPropagation();
+              // section.id is now string
+              selectSection(section.id, sectionRef.current);
               // Future: open inspector to section tab
             }}
           >
@@ -151,9 +151,9 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
         >
             {section.components.map((component) => (
                 <GenericComponentRenderer
-                  key={component.id}
+                  key={component.id} // component.id is now string
                   component={component}
-                  parentSectionId={section.id.toString()} // Pass parentSectionId
+                  parentSectionId={section.id} // section.id is now string
                 />
             ))}
         </div>

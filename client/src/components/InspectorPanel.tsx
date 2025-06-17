@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button"; // Added Button import
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -23,12 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { componentDefinitions } from "@/lib/components/definitions";
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
-const generateId = (): number => Date.now() + Math.floor(Math.random() * 100000);
+// Changed generateId to return string UUID for local default element creation (e.g. in component swap)
+const generateId = (): string => uuidv4();
 
 interface InspectorPanelProps {
   template: TemplateData;
-  selectedElementId: string | null;
+  selectedElementId: string | null; // This is the prefixed ID, e.g., "section-uuid"
   onUpdateTemplate: (updatedTemplate: TemplateData) => void;
   showPanel: boolean;
   onTogglePanel: () => void;
@@ -42,7 +44,7 @@ export default function InspectorPanel({
   onTogglePanel,
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState("properties");
-  const fileInputRef = React.useRef<HTMLInputElement>(null); // Moved to top level
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const {
     elementType: currentElementType,
@@ -61,30 +63,25 @@ export default function InspectorPanel({
       return { elementType: "template", element: template };
     }
     if (selectedElementId.startsWith("section-")) {
-      const sectionId = parseInt(selectedElementId.replace("section-", ""));
-      const section = template.sections.find((s) => s.id === sectionId);
+      const sectionId = selectedElementId.replace("section-", ""); // ID is now string
+      const section = template.sections.find((s) => s.id === sectionId); // String comparison
       return { elementType: "section", element: section || null, section };
     }
     if (selectedElementId.startsWith("component-")) {
-      const [, sectionIdStr, componentIdStr] = selectedElementId.split("-");
-      const sectionId = parseInt(sectionIdStr);
-      const componentId = parseInt(componentIdStr);
-      const section = template.sections.find((s) => s.id === sectionId);
+      const [, sectionId, componentId] = selectedElementId.split("-"); // IDs are strings
+      const section = template.sections.find((s) => s.id === sectionId); // String comparison
       if (section) {
-        const component = section.components.find((c) => c.id === componentId);
+        const component = section.components.find((c) => c.id === componentId); // String comparison
         return { elementType: "component", element: component || null, section, component };
       }
     }
     if (selectedElementId.startsWith("element-")) {
-      const [, sectionIdStr, componentIdStr, elementIdStr] = selectedElementId.split("-");
-      const sectionId = parseInt(sectionIdStr);
-      const componentId = parseInt(componentIdStr);
-      const elementId = parseInt(elementIdStr);
-      const section = template.sections.find((s) => s.id === sectionId);
+      const [, sectionId, componentId, elementId] = selectedElementId.split("-"); // IDs are strings
+      const section = template.sections.find((s) => s.id === sectionId); // String comparison
       if (section) {
-        const component = section.components.find((c) => c.id === componentId);
+        const component = section.components.find((c) => c.id === componentId); // String comparison
         if (component) {
-          const element = component.elements.find((e) => e.id === elementId);
+          const element = component.elements.find((e) => e.id === elementId); // String comparison
           return { elementType: "element", element: element || null, section, component };
         }
       }
@@ -103,7 +100,6 @@ export default function InspectorPanel({
     }
   };
 
-  // Moved handleImageFileChange to top level
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -112,8 +108,8 @@ export default function InspectorPanel({
         handleElementPropertyChange('src', reader.result as string);
       };
       reader.readAsDataURL(file);
-      if (event.target) { // Guard against event.target being null
-        event.target.value = ''; // Allow re-selecting the same file
+      if (event.target) {
+        event.target.value = '';
       }
     }
   };
@@ -125,7 +121,7 @@ export default function InspectorPanel({
     } = findSelectedElement();
 
     if (currentElementType !== 'component' || !currentSelectedComponentObj || !parentSectionForSwap) {
-      console.warn("Swap conditions not met: Not a component, or component/parent section not found.");
+      console.warn("Swap conditions not met.");
       return;
     }
     const currentSelectedComponent = currentSelectedComponentObj as ComponentData;
@@ -136,6 +132,7 @@ export default function InspectorPanel({
     let newParameters: Record<string, any> = {};
 
     if (definition) {
+      // newId() now returns string UUIDs
       newElements = definition.defaultElements.map(el => ({ ...el, id: generateId() }));
       newParameters = { ...(definition.defaultParameters || {}) };
     }
@@ -160,6 +157,7 @@ export default function InspectorPanel({
 
     if (!freshElementType || !freshSelectedObj) return;
 
+    // All ID comparisons are now string to string
     if (freshElementType === "template") {
       onUpdateTemplate({ ...template, ...updatedData });
     } else if (freshElementType === "section" && freshParentSection) {
@@ -196,6 +194,10 @@ export default function InspectorPanel({
   };
 
   const renderElementProperties = () => {
+    // ... (rest of renderElementProperties - no changes to its internal logic needed due to ID type change,
+    // as comparisons are on `currentSelectedObject.id` which is now string, and IDs in UI are for display/keys)
+    // The existing JSX for displaying IDs will just display the string UUIDs.
+    // All IDs passed to Label htmlFor or Input id should be strings, which they are.
     if (!currentSelectedObject) {
       return <div className="text-center p-4 text-gray-500">Select an element to edit its properties</div>;
     }
@@ -242,7 +244,7 @@ export default function InspectorPanel({
       let elementSpecificUI;
       switch (currentElementTyped.type) {
         case 'Heading':
-          elementSpecificUI = ( /* ... UI ... */ ); // Kept concise, no change to this part
+          elementSpecificUI = (
             <>
               <div><Label htmlFor={`el-text-${currentElementTyped.id}`}>Text</Label><Input id={`el-text-${currentElementTyped.id}`} value={currentProps.text || ''} disabled={isElementContentLocked} onChange={(e) => handleElementPropertyChange('text', e.target.value)}/></div>
               <div><Label htmlFor={`el-level-${currentElementTyped.id}`}>Level</Label><Select value={currentProps.level || 'h2'} disabled={isElementContentLocked} onValueChange={(v) => handleElementPropertyChange('level', v)}><SelectTrigger id={`el-level-${currentElementTyped.id}`}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="h1">H1</SelectItem><SelectItem value="h2">H2</SelectItem><SelectItem value="h3">H3</SelectItem><SelectItem value="h4">H4</SelectItem><SelectItem value="h5">H5</SelectItem><SelectItem value="h6">H6</SelectItem></SelectContent></Select></div>
@@ -253,72 +255,26 @@ export default function InspectorPanel({
           break;
         case 'Image': {
           const imageProps = currentProps as { src?: string; alt?: string };
-          // fileInputRef and handleImageFileChange are now from the InspectorPanel's top-level scope
           elementSpecificUI = (
             <div className="space-y-3">
               <div>
                 <Label htmlFor={`image-src-input-${currentElementTyped.id}`}>Image URL (src)</Label>
-                <Input
-                  id={`image-src-input-${currentElementTyped.id}`}
-                  type="text"
-                  value={imageProps.src || ''}
-                  onChange={(e) => handleElementPropertyChange('src', e.target.value)}
-                  placeholder="Enter image URL or upload"
-                  className="w-full mt-1"
-                  disabled={isElementContentLocked}
-                />
+                <Input id={`image-src-input-${currentElementTyped.id}`} type="text" value={imageProps.src || ''} onChange={(e) => handleElementPropertyChange('src', e.target.value)} placeholder="Enter image URL or upload" className="w-full mt-1" disabled={isElementContentLocked} />
               </div>
               <div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef} // Uses top-level ref
-                  onChange={handleImageFileChange} // Uses top-level handler
-                  className="hidden"
-                  disabled={isElementContentLocked}
-                  id={`image-file-input-${currentElementTyped.id}`}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full mt-1"
-                  disabled={isElementContentLocked}
-                >
-                  Upload/Choose Image
-                </Button>
+                <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageFileChange} className="hidden" disabled={isElementContentLocked} id={`image-file-input-${currentElementTyped.id}`} />
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="w-full mt-1" disabled={isElementContentLocked}>Upload/Choose Image</Button>
               </div>
               <div>
                 <Label htmlFor={`image-alt-input-${currentElementTyped.id}`}>Alt Text</Label>
-                <Input
-                  id={`image-alt-input-${currentElementTyped.id}`}
-                  type="text"
-                  value={imageProps.alt || ''}
-                  onChange={(e) => handleElementPropertyChange('alt', e.target.value)}
-                  placeholder="Enter alt text"
-                  className="w-full mt-1"
-                  disabled={isElementContentLocked}
-                />
+                <Input id={`image-alt-input-${currentElementTyped.id}`} type="text" value={imageProps.alt || ''} onChange={(e) => handleElementPropertyChange('alt', e.target.value)} placeholder="Enter alt text" className="w-full mt-1" disabled={isElementContentLocked} />
               </div>
-              {imageProps.src && (
-                <div>
-                  <Label>Preview:</Label>
-                  <div className="mt-1 border rounded-md p-2 flex justify-center items-center bg-gray-50 max-h-48 overflow-hidden">
-                    <img
-                      src={imageProps.src}
-                      alt={imageProps.alt || 'Preview'}
-                      className="max-w-full max-h-40 object-contain"
-                    />
-                  </div>
-                </div>
-              )}
+              {imageProps.src && ( <div> <Label>Preview:</Label> <div className="mt-1 border rounded-md p-2 flex justify-center items-center bg-gray-50 max-h-48 overflow-hidden"> <img src={imageProps.src} alt={imageProps.alt || 'Preview'} className="max-w-full max-h-40 object-contain" /> </div> </div> )}
             </div>
-          );
-          break;
+          ); break;
         }
         case 'Button':
-          elementSpecificUI = ( /* ... UI ... */ ); // Kept concise
+          elementSpecificUI = (
             <>
               <div><Label htmlFor={`el-text-${currentElementTyped.id}`}>Button Text</Label><Input id={`el-text-${currentElementTyped.id}`} value={currentProps.text || ''} disabled={isElementContentLocked} onChange={(e) => handleElementPropertyChange('text', e.target.value)}/></div>
               <div><Label htmlFor={`el-action-${currentElementTyped.id}`}>Action URL</Label><Input id={`el-action-${currentElementTyped.id}`} value={currentProps.actionUrl || ''} disabled={isElementContentLocked} onChange={(e) => handleElementPropertyChange('actionUrl', e.target.value)}/></div>
@@ -326,7 +282,6 @@ export default function InspectorPanel({
             </>
           ); break;
         case 'Group': {
-          elementSpecificUI = ( /* ... UI ... */ ); // Kept concise
           const groupProps = currentProps as { layout?: 'horizontal' | 'vertical'; gap?: string | number; elements?: ElementData[] };
           elementSpecificUI = (
             <>
@@ -337,7 +292,7 @@ export default function InspectorPanel({
           ); break;
         }
         case 'RichText': {
-          elementSpecificUI = ( /* ... UI ... */ ); // Kept concise
+          elementSpecificUI = (
             <>
               <div><Label htmlFor={`el-html-${currentElementTyped.id}`}>HTML Content</Label><Textarea id={`el-html-${currentElementTyped.id}`} rows={8} className="font-mono text-xs" value={currentProps.htmlContent || ''} disabled={isElementContentLocked} onChange={(e) => handleElementPropertyChange('htmlContent', e.target.value)}/></div>
               <p className="text-xs text-gray-500">Raw HTML editing. WYSIWYG later.</p>
@@ -357,14 +312,13 @@ export default function InspectorPanel({
     }
 
     if (currentElementType === "component" && currentSelectedObject) {
-      // ... Component rendering logic (unchanged for this refactor, kept concise) ...
       const currentComponent = currentSelectedObject as ComponentData;
       const isComponentContentLocked = currentComponent.editable === 'locked-edit';
       const isComponentLockedForReplaceBySelf = currentComponent.editable === 'locked-replacing';
       const isComponentLockedForReplaceByParent = parentSectionOfSelected?.editable === 'locked-replacing';
       const disableSwapUI = isComponentLockedForReplaceBySelf || isComponentLockedForReplaceByParent;
 
-      const componentInfo = ( /* ... */ ); // Concise
+      const componentInfo = (
         <div className="space-y-3 p-1">
           <h3 className="text-sm font-semibold">Component: {currentComponent.type} (ID: {currentComponent.id})</h3>
           <div><Label>Editable Status: <Badge variant={isComponentContentLocked ? "destructive" : "default"}>{currentComponent.editable}</Badge></Label></div>
@@ -374,7 +328,8 @@ export default function InspectorPanel({
           )}
           {(!currentComponent.parameters || Object.keys(currentComponent.parameters).length === 0) && <p className="text-xs text-gray-500">No parameters for this component.</p>}
           <p className="text-xs text-gray-500 pt-2">Select individual elements on the canvas to edit their properties.</p>
-        </div>;
+        </div>
+      );
 
       if (currentComponent.swappableWith && currentComponent.swappableWith.length > 0) {
         return (
@@ -402,7 +357,6 @@ export default function InspectorPanel({
   };
 
   return (
-    // ... Main return structure (unchanged, kept concise) ...
     <div className={cn("w-80 bg-white border-l border-gray-200 flex-shrink-0 overflow-y-auto transition-all duration-300 ease-in-out h-full", showPanel ? "translate-x-0" : "translate-x-full md:translate-x-0 md:w-12")}>
       <div className="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
         <h2 className={cn("font-medium text-gray-800", showPanel ? "block" : "hidden md:block md:sr-only")}>Inspector</h2>

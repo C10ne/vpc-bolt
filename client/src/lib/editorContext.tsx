@@ -2,23 +2,27 @@ import React, { createContext, useContext, useReducer, useState, useCallback, us
 import {
   Section as SchemaSection,
   Component as SchemaComponent,
-  Element as SchemaElement, // Added for UPDATE_ELEMENT_CONTENT
+  Element as SchemaElement,
   ComponentType as SchemaComponentType,
-  Template as SchemaTemplate,
+  Template as SchemaTemplate, // Not directly used in reducer state, but good for type safety
 } from '@shared/schema';
+// Local types (Page, Section, Component, Template) are used for state.currentPage.
+// These should ideally be fully compatible with Schema types or replaced by them.
+// For this refactor, we assume their ID fields will also become strings.
+// If local types are different, deeper changes would be needed or more casting.
 import { EditorState as AppEditorState, Page, Section, Component, ComponentType, Template } from './types';
-import { templates } from './templates';
+import { templates as staticTemplates } from './templates'; // Renamed to avoid conflict
 
 export interface EditorState extends AppEditorState {
   selectedItemRect: DOMRect | null;
   currentFocusedElementId: string | null;
 }
 
-// Define Path type for element identification
+// Define Path type for element identification with string IDs
 export interface ElementPath {
-  sectionId: number;
-  componentId: number;
-  elementId: number;
+  sectionId: string;
+  componentId: string;
+  elementId: string;
 }
 
 type EditorAction = 
@@ -33,13 +37,12 @@ type EditorAction =
   | { type: 'SAVE_PAGE' }
   | { type: 'HYDRATE_STATE'; payload: Page }
   | { type: 'DELETE_SELECTED_ITEM' }
-  | { type: 'UPDATE_ELEMENT_CONTENT'; payload: { path: ElementPath; newContent: string; elementType: 'Paragraph' | 'RichText' } }; // New action
+  | { type: 'UPDATE_ELEMENT_CONTENT'; payload: { path: ElementPath; newContent: string; elementType: 'Paragraph' | 'RichText' } };
 
 const initialState: EditorState = {
-  templates: [],
+  templates: [], // Populated from staticTemplates if needed, see SELECT_TEMPLATE
   currentPage: {
-    templateId: '',
-    name: '',
+    templateId: '', name: '',
     globalSettings: { title: '', subtitle: '', metaDescription: '', logo: '', colorScheme: { primary: '#4361ee', secondary: '#3f37c9', accent: '#4cc9f0'}},
     sections: [],
   },
@@ -55,13 +58,16 @@ const initialState: EditorState = {
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
-    // ... (other cases remain the same, ensure they are compatible with Schema types if necessary)
     case 'SELECT_TEMPLATE': {
       const templateId = action.payload;
-      const availableTemplates = state.templates.length > 0 ? state.templates : templates;
+      // Ensure staticTemplates is compatible with Template[] from ./types
+      const availableTemplates = state.templates?.length > 0 ? state.templates : (staticTemplates as unknown as Template[]);
       const template = availableTemplates.find(t => t.id === templateId);
-      if (!template) return state;
-      const defaultPage = template.defaultPage as unknown as Page;
+      if (!template) { console.warn(`Template with id ${templateId} not found.`); return state; }
+
+      // Ensure template.defaultPage is compatible with Page type
+      const defaultPage = template.defaultPage as Page;
+
       return {...state, currentPage: defaultPage, templateSelected: true, selectedSection: null, selectedComponent: null, selectedItemRect: null, currentFocusedElementId: null, unsavedChanges: true };
     }
     case 'SELECT_SECTION': {
@@ -73,22 +79,23 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {...state, selectedSection: action.payload.sectionId, selectedComponent: action.payload.componentId, selectedItemRect: action.payload.rect, currentFocusedElementId: newFocusedId };
     }
     case 'UPDATE_SECTION': {
-      const updatedSection = action.payload;
-      return {...state, currentPage: {...state.currentPage, sections: state.currentPage.sections.map(s => (s as unknown as SchemaSection).id === updatedSection.id ? (updatedSection as unknown as Section) : s)}, unsavedChanges: true };
+      const updatedSection = action.payload; // SchemaSection (id: string)
+      return {...state, currentPage: {...state.currentPage, sections: state.currentPage.sections.map(s =>
+        (s as unknown as SchemaSection).id === updatedSection.id ? (updatedSection as unknown as Section) : s // Compare string IDs
+      )}, unsavedChanges: true };
     }
     case 'UPDATE_COMPONENT': {
-      const { sectionId: targetSectionId, component: updatedComponent } = action.payload; // sectionId is string here
+      const { sectionId: targetSectionId, component: updatedComponent } = action.payload; // targetSectionId is string, updatedComponent.id is string
       return {
         ...state,
         currentPage: {
           ...state.currentPage,
           sections: state.currentPage.sections.map(section => {
-            // Ensure IDs are compared correctly (string vs number if schema is number)
-            if ((section as unknown as SchemaSection).id.toString() === targetSectionId) {
+            if ((section as unknown as SchemaSection).id === targetSectionId) { // Compare string IDs
               return {
                 ...section,
                 components: section.components.map(c =>
-                  (c as unknown as SchemaComponent).id === updatedComponent.id ? (updatedComponent as unknown as Component) : c
+                  (c as unknown as SchemaComponent).id === updatedComponent.id ? (updatedComponent as unknown as Component) : c // Compare string IDs
                 )
               };
             }
@@ -99,31 +106,32 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       };
     }
     case 'REPLACE_COMPONENT': {
-      const { sectionId, componentId, newType } = action.payload;
+      const { sectionId, componentId, newType } = action.payload; // sectionId, componentId are strings
       let newCurrentPage = { ...state.currentPage };
-      const sectionIndex = state.currentPage.sections.findIndex(s => (s as unknown as SchemaSection).id.toString() === sectionId);
+      const sectionIndex = state.currentPage.sections.findIndex(s => (s as unknown as SchemaSection).id === sectionId); // Compare string IDs
 
       if (sectionIndex !== -1) {
         const targetSection = state.currentPage.sections[sectionIndex];
-        const componentIndex = targetSection.components.findIndex(c => (c as unknown as SchemaComponent).id.toString() === componentId);
+        const componentIndex = targetSection.components.findIndex(c => (c as unknown as SchemaComponent).id === componentId); // Compare string IDs
 
         if (componentIndex !== -1) {
           const oldComponent = targetSection.components[componentIndex] as unknown as SchemaComponent;
-          if (oldComponent.editable === 'locked-replacing') {return state;}
+          if (oldComponent.editable === 'locked-replacing') { console.warn("Component is locked for replacing."); return state; }
 
-          const newComponent: SchemaComponent = {
-            id: oldComponent.id, type: newType, elements: [], editable: 'editable', parameters: {}, swappableWith: oldComponent.swappableWith
+          const newComponentData: SchemaComponent = {
+            id: oldComponent.id, // Preserve ID (string)
+            type: newType, elements: [], editable: 'editable', parameters: {}, swappableWith: oldComponent.swappableWith
           };
 
           const updatedComponents = [...targetSection.components];
-          updatedComponents[componentIndex] = newComponent as unknown as Component;
+          updatedComponents[componentIndex] = newComponentData as unknown as Component;
 
           newCurrentPage.sections = [
             ...state.currentPage.sections.slice(0, sectionIndex),
             { ...targetSection, components: updatedComponents },
             ...state.currentPage.sections.slice(sectionIndex + 1)
           ];
-          return {...state, currentPage: newCurrentPage, selectedItemRect: null, currentFocusedElementId: `component-${sectionId}-${newComponent.id}`, unsavedChanges: true };
+          return {...state, currentPage: newCurrentPage, selectedItemRect: null, currentFocusedElementId: `component-${sectionId}-${newComponentData.id}`, unsavedChanges: true };
         }
       }
       return state;
@@ -131,29 +139,26 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case 'DELETE_SELECTED_ITEM': {
       if (!state.currentFocusedElementId || !state.currentPage) return state;
       const id = state.currentFocusedElementId;
-      let newSections = [...state.currentPage.sections]; // Treat as local 'Section[]' type for map/filter
+      let newSections = [...state.currentPage.sections];
 
       if (id.startsWith('section-')) {
-        const sectionIdNum = parseInt(id.split('-')[1]);
-        const sectionToDelete = newSections.find(s => (s as unknown as SchemaSection).id === sectionIdNum);
+        const sectionIdStr = id.split('-')[1]; // ID is now string
+        const sectionToDelete = newSections.find(s => (s as unknown as SchemaSection).id === sectionIdStr);
         if (sectionToDelete && (sectionToDelete as unknown as SchemaSection).editable === 'locked-edit') {
           console.warn(`Section "${sectionToDelete.name}" is locked.`); return state;
         }
-        newSections = newSections.filter(s => (s as unknown as SchemaSection).id !== sectionIdNum);
+        newSections = newSections.filter(s => (s as unknown as SchemaSection).id !== sectionIdStr);
       } else if (id.startsWith('component-')) {
-        const [, sectionIdStr, componentIdStr] = id.split('-');
-        const sectionIdNum = parseInt(sectionIdStr);
-        const componentIdNum = parseInt(componentIdStr);
-        const sectionIndex = newSections.findIndex(s => (s as unknown as SchemaSection).id === sectionIdNum);
+        const [, sectionIdStr, componentIdStr] = id.split('-'); // IDs are strings
+        const sectionIndex = newSections.findIndex(s => (s as unknown as SchemaSection).id === sectionIdStr);
         if (sectionIndex !== -1) {
-          const parentSection = newSections[sectionIndex] as unknown as SchemaSection;
-          const componentToDelete = parentSection.components.find(c => c.id === componentIdNum);
+          const parentSection = newSections[sectionIndex] as unknown as SchemaSection; // Treat as SchemaSection for ID comparison
+          const componentToDelete = parentSection.components.find(c => (c as unknown as SchemaComponent).id === componentIdStr);
           if (componentToDelete) {
-            if (componentToDelete.editable === 'locked-edit' || parentSection.editable === 'locked-replacing') {
+            if ((componentToDelete as unknown as SchemaComponent).editable === 'locked-edit' || parentSection.editable === 'locked-replacing') {
               console.warn(`Component or parent section is locked.`); return state;
             }
-            const updatedComponents = parentSection.components.filter(c => c.id !== componentIdNum);
-            // Create a new section object for immutability
+            const updatedComponents = parentSection.components.filter(c => (c as unknown as SchemaComponent).id !== componentIdStr);
             newSections[sectionIndex] = { ...parentSection, components: updatedComponents } as unknown as Section;
           }
         }
@@ -164,17 +169,17 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     }
     case 'UPDATE_ELEMENT_CONTENT': {
       if (!state.currentPage) return state;
-      const { path, newContent, elementType } = action.payload;
+      const { path, newContent, elementType } = action.payload; // path IDs are now strings
       
-      // Deep clone currentPage to ensure immutability. Use structuredClone if available and preferred.
-      const newCurrentPage = JSON.parse(JSON.stringify(state.currentPage)) as Page;
+      const newCurrentPage = JSON.parse(JSON.stringify(state.currentPage)) as Page; // Assuming Page type also uses string IDs
 
-      const section = (newCurrentPage.sections as unknown as SchemaSection[]).find(s => s.id === path.sectionId);
+      const section = (newCurrentPage.sections as unknown as SchemaSection[]).find(s => s.id === path.sectionId); // Compare string IDs
       if (section) {
-        const component = section.components.find(c => c.id === path.componentId);
+        const component = section.components.find(c => c.id === path.componentId); // Compare string IDs
         if (component) {
-          const element = component.elements.find(e => e.id === path.elementId);
+          const element = component.elements.find(e => e.id === path.elementId); // Compare string IDs
           if (element) {
+            if (!element.properties) element.properties = {}; // Ensure properties object exists
             if (elementType === 'Paragraph') {
               element.properties.text = newContent;
             } else if (elementType === 'RichText') {
@@ -204,12 +209,12 @@ export interface EditorContextType {
   updateComponent: (sectionId: string, componentId: string, updates: Partial<SchemaComponent>) => void;
   replaceComponent: (sectionId: string, componentId: string, newType: SchemaComponentType) => void;
   deleteSelectedItem: () => void;
-  updateElementContent: (path: ElementPath, newContent: string, elementType: 'Paragraph' | 'RichText') => void; // New
+  updateElementContent: (path: ElementPath, newContent: string, elementType: 'Paragraph' | 'RichText') => void;
   setActiveTool: (tool: string) => void;
   setPreviewDevice: (device: 'desktop' | 'tablet' | 'mobile') => void;
   savePage: () => void;
   clearSelectedSection: () => void;
-  updateComponentContent: (key: string, value: any) => void; // This seems specific, might need review vs updateElementContent
+  updateComponentContent: (key: string, value: any) => void; // Legacy, review if still needed
   previewMode: boolean;
   togglePreviewMode: () => void;
   hydrateState: (page: Page) => void;
@@ -236,7 +241,8 @@ export function EditorProvider({ children }: EditorProviderProps) {
   }, []);
   
   const updateSection = useCallback((sectionId: string, updates: Partial<SchemaSection>) => {
-    const currentSection = state.currentPage.sections.find(s => (s as unknown as SchemaSection).id.toString() === sectionId);
+    // Assuming state.currentPage.sections contains items whose IDs are strings or compatible
+    const currentSection = state.currentPage.sections.find(s => (s as unknown as SchemaSection).id === sectionId);
     if (!currentSection) return;
     const updatedProperties = updates.properties ? { ...currentSection.properties, ...updates.properties } : currentSection.properties;
     const updatedSectionData = { ...(currentSection as unknown as SchemaSection), ...updates, properties: updatedProperties };
@@ -244,13 +250,12 @@ export function EditorProvider({ children }: EditorProviderProps) {
   }, [state.currentPage.sections]);
   
   const updateComponent = useCallback((sectionId: string, componentId: string, updates: Partial<SchemaComponent>) => {
-    const section = state.currentPage.sections.find(s => (s as unknown as SchemaSection).id.toString() === sectionId);
+    const section = state.currentPage.sections.find(s => (s as unknown as SchemaSection).id === sectionId);
     if (!section) return;
-    const component = section.components.find(c => (c as unknown as SchemaComponent).id.toString() === componentId);
+    const component = section.components.find(c => (c as unknown as SchemaComponent).id === componentId);
     if (!component) return;
     const updatedComponentData = { ...(component as unknown as SchemaComponent), ...updates };
-    // Pass sectionId as string, as the UPDATE_COMPONENT action payload expects it for context
-    dispatch({ type: 'UPDATE_COMPONENT', payload: { sectionId: sectionId, component: updatedComponentData } });
+    dispatch({ type: 'UPDATE_COMPONENT', payload: { sectionId, component: updatedComponentData } });
   }, [state.currentPage.sections]);
 
   const updateElementContent = useCallback((path: ElementPath, newContent: string, elementType: 'Paragraph' | 'RichText') => {
@@ -264,8 +269,6 @@ export function EditorProvider({ children }: EditorProviderProps) {
   const savePage = useCallback(() => dispatch({ type: 'SAVE_PAGE' }), []);
   const clearSelectedSection = useCallback(() => dispatch({ type: 'SELECT_SECTION', payload: { sectionId: null, rect: null } }), []);
   
-  // This updateComponentContent seems different from the new one. Review if it's still needed or should be merged/removed.
-  // For now, keeping both. The new one is more specific for inline text/HTML.
   const legacyUpdateComponentContent = useCallback((key: string, value: any) => {
     const { selectedSection: selSectionId, selectedComponent: selCompId, currentPage } = state;
     if (!selSectionId || !selCompId) return;
@@ -284,7 +287,7 @@ export function EditorProvider({ children }: EditorProviderProps) {
   const contextValue = useMemo(() => ({
     state, selectTemplate, selectSection, selectComponent, updateSection, updateComponent,
     replaceComponent, deleteSelectedItem, updateElementContent, setActiveTool, setPreviewDevice, savePage, clearSelectedSection,
-    updateComponentContent: legacyUpdateComponentContent, // Keep the old one aliased for now if it's used elsewhere
+    updateComponentContent: legacyUpdateComponentContent,
     previewMode, togglePreviewMode, hydrateState,
   }), [
     state, selectTemplate, selectSection, selectComponent, updateSection, updateComponent,
