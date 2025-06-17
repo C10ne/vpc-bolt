@@ -1,19 +1,34 @@
 import { useState } from "react";
-import { Template, Section, Element, ElementType } from "@shared/schema";
+import {
+  Template as TemplateData,
+  Section as SectionData,
+  Component as ComponentData,
+  Element as ElementData,
+  ElementType
+} from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+// Switch, Slider, ColorPicker might be used later or for specific element properties
+// import { Switch } from "@/components/ui/switch";
+// import { Slider } from "@/components/ui/slider";
+// import { ColorPicker } from "@/components/ui/color-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ColorPicker } from "@/components/ui/color-picker";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 interface InspectorPanelProps {
-  template: Template;
+  template: TemplateData;
   selectedElementId: string | null;
-  onUpdateTemplate: (updatedTemplate: Template) => void;
+  onUpdateTemplate: (updatedTemplate: TemplateData) => void;
   showPanel: boolean;
   onTogglePanel: () => void;
 }
@@ -27,13 +42,12 @@ export default function InspectorPanel({
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState("properties");
 
-  // Find the selected element based on its ID
   const findSelectedElement = (): {
     elementType: "template" | "section" | "component" | "element" | null;
-    element: Template | Section | Element | null;
-    section?: Section;
-    sectionIndex?: number;
-    elementIndex?: number;
+    element: TemplateData | SectionData | ComponentData | ElementData | null; // Aliased types
+    section?: SectionData; // Aliased type
+    component?: ComponentData; // Aliased type, NEW
+    // sectionIndex and elementIndex are not strictly needed by the rest of the logic with new updateElement
   } => {
     if (!selectedElementId) {
       return { elementType: "template", element: template };
@@ -43,12 +57,14 @@ export default function InspectorPanel({
       const sectionId = parseInt(selectedElementId.replace("section-", ""));
       const section = template.sections.find((s) => s.id === sectionId);
       if (section) {
-        return { elementType: "section", element: section, sectionIndex: template.sections.indexOf(section) };
+        return { elementType: "section", element: section, section };
       }
     }
 
     if (selectedElementId.startsWith("component-")) {
-      const [, sectionId, componentId] = selectedElementId.split("-").map(Number);
+      const [, sectionIdStr, componentIdStr] = selectedElementId.split("-");
+      const sectionId = parseInt(sectionIdStr);
+      const componentId = parseInt(componentIdStr);
       const section = template.sections.find((s) => s.id === sectionId);
       if (section) {
         const component = section.components.find((c) => c.id === componentId);
@@ -57,15 +73,17 @@ export default function InspectorPanel({
             elementType: "component",
             element: component,
             section,
-            sectionIndex: template.sections.indexOf(section),
-            elementIndex: section.components.indexOf(component),
+            component, // Itself
           };
         }
       }
     }
 
     if (selectedElementId.startsWith("element-")) {
-      const [, sectionId, componentId, elementId] = selectedElementId.split("-").map(Number);
+      const [, sectionIdStr, componentIdStr, elementIdStr] = selectedElementId.split("-");
+      const sectionId = parseInt(sectionIdStr);
+      const componentId = parseInt(componentIdStr);
+      const elementId = parseInt(elementIdStr);
       const section = template.sections.find((s) => s.id === sectionId);
       if (section) {
         const component = section.components.find((c) => c.id === componentId);
@@ -76,46 +94,110 @@ export default function InspectorPanel({
               elementType: "element",
               element,
               section,
-              sectionIndex: template.sections.indexOf(section),
+              component, // Parent component of the element
             };
           }
         }
       }
     }
-
     return { elementType: null, element: null };
   };
 
-  const { elementType, element, section } = findSelectedElement();
+  const {
+    elementType: currentElementType,
+    element: currentSelectedObject,
+    section: parentSection,
+    component: parentComponent
+  } = findSelectedElement();
 
-  const updateElement = (updatedElement: any) => {
-    if (!element || !elementType) return;
+
+  const handleElementPropertyChange = (propertyName: string, value: any) => {
+    // Re-fetch selected element data to ensure freshness, though for simple cases,
+    // currentSelectedObject from InspectorPanel's scope might be okay.
+    // Using currentSelectedObject for now as per instruction for simplicity.
+    if (currentElementType === 'element' && currentSelectedObject) {
+      const currentSchemaElement = currentSelectedObject as ElementData;
+      const oldProperties = currentSchemaElement.properties || {};
+      // Call updateElement with the new state of the element
+      updateElement({
+        ...currentSchemaElement,
+        properties: {
+          ...oldProperties,
+          [propertyName]: value,
+        },
+      });
+    }
+  };
+
+  const updateElement = (updatedData: any) => {
+    if (!currentElementType) return;
+
+    // Fetch fresh selection details, especially parent references for updates
+    const {
+      elementType,
+      element: selectedObj, // Renamed to avoid conflict with updatedData
+      section: parentSectionOfSelected,
+      component: parentComponentOfSelected
+    } = findSelectedElement();
 
     if (elementType === "template") {
-      onUpdateTemplate({
-        ...template,
-        ...updatedElement,
-      });
+      onUpdateTemplate({ ...template, ...updatedData });
       return;
     }
 
-    if (elementType === "section" && section) {
-      const updatedSections = template.sections.map((s) =>
-        s.id === section.id ? { ...s, ...updatedElement } : s
+    if (elementType === "section" && parentSectionOfSelected) { // parentSectionOfSelected is the section itself here
+      const updatedSection = updatedData as SectionData;
+      const newSections = template.sections.map((s) =>
+        s.id === updatedSection.id ? updatedSection : s
       );
-      onUpdateTemplate({
-        ...template,
-        sections: updatedSections,
-      });
+      onUpdateTemplate({ ...template, sections: newSections });
       return;
     }
 
-    // Similar logic for component and element
-    // Will be implemented based on their structure
+    if (elementType === "component" && parentSectionOfSelected) {
+      const updatedComponent = updatedData as ComponentData;
+      const newSections = template.sections.map(s => {
+        if (s.id === parentSectionOfSelected.id) {
+          return {
+            ...s,
+            components: s.components.map(c => c.id === updatedComponent.id ? updatedComponent : c)
+          };
+        }
+        return s;
+      });
+      onUpdateTemplate({ ...template, sections: newSections });
+      return;
+    }
+
+    if (elementType === "element" && parentComponentOfSelected && parentSectionOfSelected) {
+      const updatedElement = updatedData as ElementData;
+      const newSections = template.sections.map(s => {
+        if (s.id === parentSectionOfSelected.id) {
+          return {
+            ...s,
+            components: s.components.map(c => {
+              if (c.id === parentComponentOfSelected.id) {
+                return {
+                  ...c,
+                  elements: c.elements.map(el => el.id === updatedElement.id ? updatedElement : el)
+                };
+              }
+              return c;
+            })
+          };
+        }
+        return s;
+      });
+      onUpdateTemplate({ ...template, sections: newSections });
+      return;
+    }
   };
 
   const renderElementProperties = () => {
-    if (!element) {
+    // Use the values from the top-level findSelectedElement call for rendering
+    // currentSelectedObject, currentElementType are already available from component scope
+
+    if (!currentSelectedObject) {
       return (
         <div className="text-center p-4 text-gray-500">
           Select an element to edit its properties
@@ -123,344 +205,299 @@ export default function InspectorPanel({
       );
     }
 
-    if (elementType === "template") {
+    if (currentElementType === "template") {
+      const currentTemplate = currentSelectedObject as TemplateData;
       return (
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium text-gray-700">Title</Label>
+            <Label className="text-sm font-medium">Template Name</Label>
             <Input
-              value={(element as Template).title}
-              onChange={(e) => updateElement({ title: e.target.value })}
+              value={currentTemplate.name}
+              onChange={(e) => updateElement({ ...currentTemplate, name: e.target.value })}
               className="w-full mt-1"
             />
           </div>
-          
           <div>
-            <Label className="text-sm font-medium text-gray-700">Description</Label>
-            <Textarea
-              value={(element as Template).description || ""}
-              onChange={(e) => updateElement({ description: e.target.value })}
+            <Label className="text-sm font-medium">Title</Label>
+            <Input
+              value={currentTemplate.title}
+              onChange={(e) => updateElement({ ...currentTemplate, title: e.target.value })}
               className="w-full mt-1"
-              rows={3}
             />
           </div>
-          
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Primary Color</Label>
-            <div className="mt-1">
-              <ColorPicker
-                color={(element as Template).colors?.primary || "#3B82F6"}
-                onChange={(color) =>
-                  updateElement({
-                    colors: { ...((element as Template).colors || {}), primary: color },
-                  })
-                }
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Secondary Color</Label>
-            <div className="mt-1">
-              <ColorPicker
-                color={(element as Template).colors?.secondary || "#6366F1"}
-                onChange={(color) =>
-                  updateElement({
-                    colors: { ...((element as Template).colors || {}), secondary: color },
-                  })
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Brand Logo</Label>
-            <div className="mt-1 border border-gray-300 rounded p-2 bg-gray-50">
-              <div className="h-20 bg-gray-200 rounded mb-2 flex items-center justify-center overflow-hidden">
-                {(element as Template).logoUrl ? (
-                  <img
-                    src={(element as Template).logoUrl}
-                    alt="Logo"
-                    className="max-h-full max-w-full object-contain"
-                  />
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-10 w-10 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                )}
-              </div>
-              <div className="flex justify-between">
-                <button className="text-xs text-primary">Change Logo</button>
-                <button className="text-xs text-gray-500">Remove</button>
-              </div>
-            </div>
-          </div>
+          {/* Add more template properties here, e.g., colors, logoUrl from original */}
         </div>
       );
     }
 
-    if (elementType === "section" && section) {
+    if (currentElementType === "section" && currentSelectedObject) {
+      const currentSection = currentSelectedObject as SectionData;
       return (
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-700">
-              Section: {(element as Section).name}
+            <h3 className="text-sm font-semibold">
+              Section: {currentSection.name} (ID: {currentSection.id})
             </h3>
-            <Badge
-              variant={
-                (element as Section).editable === "locked-edit"
-                  ? "destructive"
-                  : (element as Section).editable === "locked-components"
-                  ? "warning"
-                  : "success"
-              }
-              className="text-xs"
-            >
-              {(element as Section).editable === "locked-edit"
-                ? "Locked Editing"
-                : (element as Section).editable === "locked-components"
-                ? "Locked Components"
-                : "Editable"}
+            <Badge variant={currentSection.editable === "locked-edit" ? "destructive" : "default"}>
+              {currentSection.editable}
             </Badge>
           </div>
-          
           <div>
-            <Label className="text-sm font-medium text-gray-700">Section Title</Label>
+            <Label className="text-sm font-medium">Name</Label>
             <Input
-              value={(element as Section).name}
-              onChange={(e) => updateElement({ name: e.target.value })}
+              value={currentSection.name}
+              onChange={(e) => updateElement({ ...currentSection, name: e.target.value })}
               className="w-full mt-1"
-              disabled={(element as Section).editable === "locked-edit"}
+              disabled={currentSection.editable === "locked-edit"}
             />
           </div>
-          
-          <div>
-            <Label className="text-sm font-medium text-gray-700">Background</Label>
-            <div className="flex space-x-2 mt-1">
-              <button 
-                className="w-6 h-6 rounded-full bg-white border border-gray-300 flex items-center justify-center"
-                onClick={() => updateElement({ background: "white" })}
-              >
-                {(element as Section).background === "white" && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3 w-3 text-primary"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </button>
-              <button 
-                className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center"
-                onClick={() => updateElement({ background: "gray-100" })}
-              >
-                {(element as Section).background === "gray-100" && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3 w-3 text-primary"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </button>
-              <button 
-                className="w-6 h-6 rounded-full bg-blue-50 border border-gray-300 flex items-center justify-center"
-                onClick={() => updateElement({ background: "blue-50" })}
-              >
-                {(element as Section).background === "blue-50" && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3 w-3 text-primary"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </button>
-              <button 
-                className="w-6 h-6 rounded-full bg-gray-800 border border-gray-300 flex items-center justify-center"
-                onClick={() => updateElement({ background: "gray-800" })}
-              >
-                {(element as Section).background === "gray-800" && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3 w-3 text-white"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </button>
-              <button className="w-6 h-6 rounded-full border border-gray-300 text-gray-400 flex items-center justify-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3 w-3"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
+          {/* Add more section properties like background, spacing from original, if needed */}
+           <div>
+            <Label className="text-sm font-medium">Spacing Top (px)</Label>
+            <Input
+              type="number"
+              value={currentSection.spacing?.top || 0}
+              onChange={(e) => updateElement({ ...currentSection, spacing: { ...currentSection.spacing, top: parseInt(e.target.value) }})}
+              className="w-full mt-1"
+            />
           </div>
-          
           <div>
-            <Label className="text-sm font-medium text-gray-700">Spacing</Label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <div>
-                <Label className="text-xs text-gray-500">Top</Label>
-                <Input
-                  type="number"
-                  value={(element as Section).spacing?.top || 12}
-                  onChange={(e) =>
-                    updateElement({
-                      spacing: {
-                        ...((element as Section).spacing || {}),
-                        top: parseInt(e.target.value),
-                      },
-                    })
-                  }
-                  className="w-full mt-1"
-                  disabled={(element as Section).editable === "locked-edit"}
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-gray-500">Bottom</Label>
-                <Input
-                  type="number"
-                  value={(element as Section).spacing?.bottom || 12}
-                  onChange={(e) =>
-                    updateElement({
-                      spacing: {
-                        ...((element as Section).spacing || {}),
-                        bottom: parseInt(e.target.value),
-                      },
-                    })
-                  }
-                  className="w-full mt-1"
-                  disabled={(element as Section).editable === "locked-edit"}
-                />
-              </div>
-            </div>
+            <Label className="text-sm font-medium">Spacing Bottom (px)</Label>
+            <Input
+              type="number"
+              value={currentSection.spacing?.bottom || 0}
+              onChange={(e) => updateElement({ ...currentSection, spacing: { ...currentSection.spacing, bottom: parseInt(e.target.value) }})}
+              className="w-full mt-1"
+            />
           </div>
-          
-          {/* Section-specific properties based on section type */}
-          {(element as Section).type === "FeaturedProductsSection" && (
-            <div className="border-t border-gray-200 pt-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Layout Settings</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Products Per Row</Label>
-                  <div className="flex rounded-md overflow-hidden border border-gray-300 mt-1">
-                    {[1, 2, 3, 4].map((num) => (
-                      <button
-                        key={num}
-                        className={cn(
-                          "flex-1 py-1",
-                          num < 4 && "border-r border-gray-300",
-                          (element as any).productsPerRow === num
-                            ? "bg-primary text-white"
-                            : num === 3 && !(element as any).productsPerRow
-                            ? "bg-primary text-white"
-                            : ""
-                        )}
-                        onClick={() => updateElement({ productsPerRow: num })}
-                        disabled={(element as Section).editable === "locked-edit"}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">
-                    Spacing Between Items
-                  </Label>
-                  <Slider
-                    value={[(element as any).spacing?.between || 6]}
-                    min={0}
-                    max={10}
-                    step={1}
-                    onValueChange={(value) =>
-                      updateElement({
-                        spacing: {
-                          ...((element as Section).spacing || {}),
-                          between: value[0],
-                        },
-                      })
-                    }
-                    disabled={(element as Section).editable === "locked-edit"}
-                    className="mt-2"
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Narrow</span>
-                    <span>Medium</span>
-                    <span>Wide</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Show "View All" Button
-                  </Label>
-                  <Switch
-                    checked={(element as any).showViewAllButton || false}
-                    onCheckedChange={(checked) =>
-                      updateElement({ showViewAllButton: checked })
-                    }
-                    disabled={(element as Section).editable === "locked-edit"}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
 
-    // Logic for component and element properties will be similar
+    if (currentElementType === "element" && currentSelectedObject) {
+      const currentElementTyped = currentSelectedObject as ElementData;
+      const currentProps = currentElementTyped.properties || {};
+
+      return (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold">
+            Element: {currentElementTyped.type} (ID: {currentElementTyped.id})
+          </h3>
+          {(() => {
+            switch (currentElementTyped.type) {
+              case 'Heading':
+                return (
+                  <>
+                    <div>
+                      <Label htmlFor={`element-text-${currentElementTyped.id}`}>Text</Label>
+                      <Input
+                        id={`element-text-${currentElementTyped.id}`}
+                        value={currentProps.text || ''}
+                        onChange={(e) => handleElementPropertyChange('text', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`element-level-${currentElementTyped.id}`}>Level</Label>
+                      <Select
+                        value={currentProps.level || 'h2'}
+                        onValueChange={(value) => handleElementPropertyChange('level', value)}
+                      >
+                        <SelectTrigger id={`element-level-${currentElementTyped.id}`}>
+                          <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="h1">H1</SelectItem>
+                          <SelectItem value="h2">H2</SelectItem>
+                          <SelectItem value="h3">H3</SelectItem>
+                          <SelectItem value="h4">H4</SelectItem>
+                          <SelectItem value="h5">H5</SelectItem>
+                          <SelectItem value="h6">H6</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                );
+              case 'Paragraph':
+                return (
+                  <div>
+                    <Label htmlFor={`element-text-${currentElementTyped.id}`}>Text</Label>
+                    <Textarea
+                      id={`element-text-${currentElementTyped.id}`}
+                      value={currentProps.text || ''} // Assuming 'text' for paragraph, schema said htmlContent for p
+                      onChange={(e) => handleElementPropertyChange('text', e.target.value)}
+                    />
+                  </div>
+                );
+              case 'Image':
+                return (
+                  <>
+                    <div>
+                      <Label htmlFor={`element-src-${currentElementTyped.id}`}>Source URL</Label>
+                      <Input
+                        id={`element-src-${currentElementTyped.id}`}
+                        value={currentProps.src || ''}
+                        onChange={(e) => handleElementPropertyChange('src', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`element-alt-${currentElementTyped.id}`}>Alt Text</Label>
+                      <Input
+                        id={`element-alt-${currentElementTyped.id}`}
+                        value={currentProps.alt || ''}
+                        onChange={(e) => handleElementPropertyChange('alt', e.target.value)}
+                      />
+                    </div>
+                  </>
+                );
+              case 'Button':
+                return (
+                  <>
+                    <div>
+                      <Label htmlFor={`element-text-${currentElementTyped.id}`}>Button Text</Label>
+                      <Input
+                        id={`element-text-${currentElementTyped.id}`}
+                        value={currentProps.text || ''}
+                        onChange={(e) => handleElementPropertyChange('text', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`element-actionUrl-${currentElementTyped.id}`}>Action URL</Label>
+                      <Input
+                        id={`element-actionUrl-${currentElementTyped.id}`}
+                        value={currentProps.actionUrl || ''}
+                        onChange={(e) => handleElementPropertyChange('actionUrl', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`element-style-${currentElementTyped.id}`}>Style</Label>
+                      <Select
+                        value={currentProps.style || 'default'}
+                        onValueChange={(value) => handleElementPropertyChange('style', value)}
+                      >
+                        <SelectTrigger id={`element-style-${currentElementTyped.id}`}>
+                          <SelectValue placeholder="Select style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="primary">Primary</SelectItem>
+                          <SelectItem value="outline">Outline</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                );
+              case 'Group': {
+                const groupProps = currentProps as { elements?: ElementData[]; layout?: 'horizontal' | 'vertical'; gap?: string | number };
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor={`group-layout-${currentElementTyped.id}`}>Layout</Label>
+                      <Select
+                        value={groupProps.layout || 'vertical'}
+                        onValueChange={(value) => handleElementPropertyChange('layout', value as 'horizontal' | 'vertical')}
+                      >
+                        <SelectTrigger id={`group-layout-${currentElementTyped.id}`} className="w-full mt-1">
+                          <SelectValue placeholder="Select layout" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="vertical">Vertical</SelectItem>
+                          <SelectItem value="horizontal">Horizontal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor={`group-gap-${currentElementTyped.id}`}>Gap (e.g., 8px, 1rem)</Label>
+                      <Input
+                        id={`group-gap-${currentElementTyped.id}`}
+                        type="text"
+                        value={groupProps.gap || '0px'}
+                        onChange={(e) => handleElementPropertyChange('gap', e.target.value)}
+                        placeholder="e.g., 8px, 0.5rem"
+                        className="w-full mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Child Elements</Label>
+                      <div className="text-sm text-gray-600 border p-2 rounded-md min-h-[50px] bg-gray-50 mt-1 max-h-40 overflow-y-auto">
+                        {groupProps.elements && groupProps.elements.length > 0
+                          ? groupProps.elements.map(el => (
+                              <div key={el.id} className="p-1 border-b last:border-b-0 text-xs">
+                                <strong>{el.type}</strong> (ID: {el.id})
+                              </div>
+                            ))
+                          : <p className="text-xs italic">This group is currently empty.</p>}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Select child elements directly in the editor to modify them.</p>
+                    </div>
+                  </div>
+                );
+              }
+              case 'RichText': {
+                const richTextProps = currentProps as { htmlContent?: string };
+                return (
+                  <div className="space-y-2"> {/* Changed space-y-4 to space-y-2 for compactness */}
+                    <Label htmlFor={`richtext-htmlcontent-${currentElementTyped.id}`}>HTML Content</Label>
+                    <Textarea
+                      id={`richtext-htmlcontent-${currentElementTyped.id}`}
+                      value={richTextProps.htmlContent || ''}
+                      onChange={(e) => handleElementPropertyChange('htmlContent', e.target.value)}
+                      placeholder="<p>Enter <b>HTML</b> content here...</p>"
+                      className="w-full font-mono text-xs mt-1" // Monospace for HTML editing
+                      rows={8} // Decent number of rows for HTML
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Note: You are editing raw HTML. A WYSIWYG editor will be implemented later.
+                    </p>
+                  </div>
+                );
+              }
+              default:
+                return <p>Unsupported element type: {currentElementTyped.type}</p>;
+            }
+          })()}
+        </div>
+      );
+    }
+
+    if (currentElementType === "component" && currentSelectedObject) {
+      const currentComponentTyped = currentSelectedObject as ComponentData;
+      return (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold">
+            Component: {currentComponentTyped.type} (ID: {currentComponentTyped.id})
+          </h3>
+          <div>
+            <Label>Editable Status:</Label>
+            <Badge variant={currentComponentTyped.editable === "locked-edit" ? "destructive" : "default"} className="ml-2">
+              {currentComponentTyped.editable}
+            </Badge>
+          </div>
+          {currentComponentTyped.parameters && (
+            <div>
+              <Label>Parameters:</Label>
+              <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-auto">
+                {JSON.stringify(currentComponentTyped.parameters, null, 2)}
+              </pre>
+            </div>
+          )}
+          {currentComponentTyped.swappableWith && currentComponentTyped.swappableWith.length > 0 && (
+            <div>
+              <Label>Swappable With:</Label>
+              <ul className="list-disc list-inside text-sm">
+                {currentComponentTyped.swappableWith.map(type => <li key={type}>{type}</li>)}
+              </ul>
+            </div>
+          )}
+          <p className="text-xs text-gray-500 pt-2">
+            Select individual elements within this component on the canvas to edit their specific properties.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="text-center p-4 text-gray-500">
-        Select an element to edit its properties
+        Select an element to edit its properties (or no properties available for this type).
       </div>
     );
   };
@@ -468,14 +505,14 @@ export default function InspectorPanel({
   return (
     <div
       className={cn(
-        "w-80 bg-white border-l border-gray-200 flex-shrink-0 overflow-auto transition-all duration-300 ease-in-out h-full",
-        showPanel ? "translate-x-0" : "translate-x-full md:translate-x-0 md:w-12"
+        "w-80 bg-white border-l border-gray-200 flex-shrink-0 overflow-y-auto transition-all duration-300 ease-in-out h-full",
+        showPanel ? "translate-x-0" : "translate-x-full md:translate-x-0 md:w-12" // Adjusted for persistent icon bar
       )}
     >
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
         <h2
           className={cn(
-            "font-medium",
+            "font-medium text-gray-800",
             showPanel ? "block" : "hidden md:block md:sr-only"
           )}
         >
@@ -485,34 +522,27 @@ export default function InspectorPanel({
           className="text-gray-500 hover:text-gray-700"
           onClick={onTogglePanel}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d={
-                showPanel
-                  ? "M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                  : "M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-              }
-              clipRule="evenodd"
-            />
-          </svg>
+          {/* Icon changes based on panel state */}
+          {showPanel ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+          )}
         </button>
       </div>
 
       <div className={cn(showPanel ? "block" : "hidden md:block")}>
-        {/* Tabs for different inspector panels */}
         <Tabs
           defaultValue="properties"
           value={activeTab}
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 sticky top-[57px] bg-white z-[9]"> {/* Adjust top value based on header height */}
             <TabsTrigger value="properties">Properties</TabsTrigger>
             <TabsTrigger value="styles">Styles</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -522,12 +552,12 @@ export default function InspectorPanel({
           </TabsContent>
           <TabsContent value="styles" className="p-4">
             <div className="text-center p-4 text-gray-500">
-              Style options will appear here based on the selected element.
+              Style options will appear here. (Not implemented yet)
             </div>
           </TabsContent>
           <TabsContent value="settings" className="p-4">
             <div className="text-center p-4 text-gray-500">
-              Settings options will appear here based on the selected element.
+              Advanced settings will appear here. (Not implemented yet)
             </div>
           </TabsContent>
         </Tabs>

@@ -28,7 +28,9 @@ export type ElementType =
   | "Copyright" 
   | "Text" 
   | "Price"
-  | "Rating";
+  | "Rating"
+  | "Group"
+  | "RichText";
 
 // Component types
 export type ComponentType = 
@@ -49,7 +51,10 @@ export type SectionType =
   | "FooterSection";
 
 // Editability status
-export type EditableType = "editable" | "locked-replacing" | "locked-edit";
+export type EditableType =
+  | "editable" // Freely editable and replaceable.
+  | "locked-replacing" // Component cannot be swapped/replaced; its internal elements *can* be edited.
+  | "locked-edit"; // Internal elements of the component *cannot* be edited; the component itself *can* be swapped/replaced (unless its parent section also imposes replacement restrictions).
 
 // Templates table
 export const templates = pgTable("templates", {
@@ -106,6 +111,13 @@ export const insertProjectSchema = createInsertSchema(projects).pick({
 export interface Element {
   id: number;
   type: ElementType;
+  // properties will hold specific attributes based on ElementType. For example:
+  // For Heading: { text: string; level: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'; }
+  // For Paragraph: { htmlContent: string; } // Or 'text' for simple paragraphs
+  // For Image: { src: string; alt?: string; }
+  // For Button: { text: string; actionUrl?: string; style?: string; }
+  // For Group: { elements: Element[]; layout?: 'horizontal' | 'vertical'; gap?: string | number; } // Note: Element[] here refers to ElementData in consuming code
+  // For RichText: { htmlContent: string; }
   properties: Record<string, any>;
 }
 
@@ -114,6 +126,8 @@ export interface Component {
   type: ComponentType;
   editable: EditableType;
   elements: Element[];
+  swappableWith?: ComponentType[];
+  parameters?: Record<string, any>; // e.g., for holding styling hints like `image-class`
 }
 
 export interface Section {
@@ -121,6 +135,9 @@ export interface Section {
   type: SectionType;
   name: string;
   editable: EditableType;
+  allowedComponentTypes?: ComponentType[];
+  maxComponents?: number;
+  minComponents?: number;
   background?: string;
   spacing?: {
     top?: number;

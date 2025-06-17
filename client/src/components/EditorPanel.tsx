@@ -121,33 +121,31 @@ export default function EditorPanel({
   };
 
   const renderSection = (section: Section) => {
+    // index is still useful for D&D handlers here in EditorPanel
+    const index = template.sections.findIndex(s => s.id === section.id);
 
     return (
       <div
         key={section.id}
         className={cn(
-          "border-2 border-transparent hover:border-blue-200 relative group",
-          selectedElementId === `section-${section.id}` && "border-blue-400"
+          "border-2 border-transparent hover:border-blue-200 relative group"
+          // Selection styling is now handled within SectionComponent
         )}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectElement(`section-${section.id}`);
-        }}
+        // onClick for selection is now handled within SectionComponent
         draggable={true}
         onDragStart={() => handleDragStart(section)}
         onDragEnd={handleDragEnd}
-        onDragOver={(e) => handleDragOver(e, template.sections.indexOf(section))}
-        onDrop={(e) => handleDrop(e, template.sections.indexOf(section))}
+        onDragOver={(e) => handleDragOver(e, index)}
+        onDrop={(e) => handleDrop(e, index)}
       >
-        {/* Section controls placeholder */}
-        
         <SectionComponent 
           section={section}
-          index={template.sections.indexOf(section)}
+          // No 'index' prop needed for SectionComponent itself
         />
         
-        {isDraggingOver === template.sections.indexOf(section) && (
-          <div className="border-t-2 border-primary absolute top-0 left-0 right-0"></div>
+        {/* Drag-over indicator for dropping sections, managed by EditorPanel */}
+        {isDraggingOver === index && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 z-20"></div>
         )}
       </div>
     );
