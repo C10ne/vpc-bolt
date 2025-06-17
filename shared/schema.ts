@@ -40,7 +40,9 @@ export type ComponentType =
   | "VideoSlider" 
   | "ProductCard" 
   | "Testimonial" 
-  | "Footer";
+  | "Footer"
+  | "RichTextComponent"
+  | "ButtonComponent";
 
 // Section types
 export type SectionType = 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react'; // Add useRef
 import { useEditor } from '@/lib/editorContext';
 import { cn } from '@/lib/utils';
 import { Section as SectionData } from '@shared/schema'; // Using direct import from schema
@@ -30,6 +30,7 @@ const isDarkBackground = (backgroundColor: string | undefined): boolean => {
 
 
 const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
+  const sectionRef = useRef<HTMLDivElement>(null); // Create ref
   const { state, selectSection, previewMode } = useEditor();
   // Use selectedElementId which should store the fully prefixed ID, e.g., "section-xyz"
   const { selectedElementId } = state;
@@ -93,6 +94,7 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
 
   return (
     <div 
+      ref={sectionRef} // Assign ref
       className={cn(
         "section-boundary relative",
         isSelected && !previewMode ? "border-2 border-primary bg-blue-50/30" : "border-2 border-transparent",
@@ -101,8 +103,11 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
       data-section-id={section.id}
       data-section-type={section.type}
       onClick={(e) => {
-        if (!previewMode && (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('section-boundary'))) {
-          selectSection(section.id);
+        // Select section only if clicking on the section itself (not its children like components)
+        // and not in preview mode
+        if (!previewMode && sectionRef.current && e.target === sectionRef.current) {
+          // Pass section.id as string and the DOM node
+          selectSection(section.id.toString(), sectionRef.current);
         }
       }}
     >
@@ -114,8 +119,9 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
             className="h-7 w-7"
             title="Edit Section"
             onClick={(e) => {
-              e.stopPropagation();
-              selectSection(section.id); 
+              e.stopPropagation(); // Prevent section deselection or re-selection with potentially null node
+              // Ensure section is selected with its DOM node for inspector context
+              selectSection(section.id.toString(), sectionRef.current);
               // Future: open inspector to section tab
             }}
           >
@@ -144,7 +150,11 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ section }) => {
             }}
         >
             {section.components.map((component) => (
-                <GenericComponentRenderer key={component.id} component={component} />
+                <GenericComponentRenderer
+                  key={component.id}
+                  component={component}
+                  parentSectionId={section.id.toString()} // Pass parentSectionId
+                />
             ))}
         </div>
       ) : !previewMode ? (
