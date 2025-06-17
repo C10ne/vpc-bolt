@@ -52,7 +52,7 @@ export const componentDefinitions: ComponentDefinition[] = [
       cardStyle: 'shadow', // e.g., 'flat', 'shadow'
     },
     defaultElements: [
-      { id: newId(), type: 'Image', properties: { src: 'https://via.placeholder.com/300x300.png?text=Product', alt: 'Product Image' } },
+      { id: newId(), type: 'Image', properties: { src: 'https://placeholder.pagebee.io/api/random//300x300.png?text=Product', alt: 'Product Image' } },
       { id: newId(), type: 'Heading', properties: { text: 'New Product', level: 'h3' } },
       { id: newId(), type: 'Paragraph', properties: { text: 'Brief product details and key selling points.' } },
       { id: newId(), type: 'Price', properties: { amount: '0.00', currencySymbol: '$' } }, // Adjusted from 'currency' to 'currencySymbol'

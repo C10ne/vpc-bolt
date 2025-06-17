@@ -13,7 +13,7 @@ class ComponentRegistry {
       defaultContent: {
         title: 'Project Title',
         description: 'Project description goes here',
-        imageUrl: 'https://via.placeholder.com/600x400',
+        imageUrl: 'https://placeholder.pagebee.io/api/random//600x400',
         technologies: ['React', 'TypeScript', 'Tailwind'],
         link: '#'
       }

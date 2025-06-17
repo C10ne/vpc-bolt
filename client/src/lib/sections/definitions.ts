@@ -110,7 +110,7 @@ export const sectionDefinitions: SectionDefinition[] = [
         type: 'ProductCard',
         editable: 'editable',
         elements: [
-          { id: newId(), type: 'Image', properties: { src: 'https://via.placeholder.com/300x200.png?text=Product+Image', alt: 'Product Image' } },
+          { id: newId(), type: 'Image', properties: { src: 'https://placeholder.pagebee.io/api/random//300x200.png?text=Product+Image', alt: 'Product Image' } },
           { id: newId(), type: 'Heading', properties: { text: 'Sample Product', level: 'h3' } },
           { id: newId(), type: 'Paragraph', properties: { text: 'Short product description highlighting key features.' } },
           { id: newId(), type: 'Price', properties: { amount: '29.99', currencySymbol: '$' } }, // ElementType 'Price'

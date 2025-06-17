@@ -13,7 +13,7 @@ export const template: TemplateSettings = {
     metaDescription: 'Professional portfolio showcasing my work and skills',
   },
   themeSettings: {
-    logo: 'https://via.placeholder.com/120x40',
+    logo: 'https://placeholder.pagebee.io/api/random//120/40',
     colorScheme: {
       primary: '#6366f1',
       secondary: '#4f46e5',

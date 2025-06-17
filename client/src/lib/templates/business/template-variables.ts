@@ -11,7 +11,7 @@ export const businessTemplate: Template = {
     styles: ['../global/bootstrap.scss', '../../colors.scss', 'css/dark.css']
   },
   editableProperties: {
-    logo: 'https://via.placeholder.com/120x40',
+    logo: 'https://placeholder.pagebee.io/api/random//120/40',
     businessName: 'Business Name',
     address: 'Default Address',
     socialLinks: {
