@@ -15,7 +15,7 @@ export const templates: Template[] = [
         title: 'Business Template',
         subtitle: 'A professional business website template',
         metaDescription: 'Professional business website template with modern design',
-        logo: 'https://placeholder.pagebee.io/api/random//120/40',
+        logo: 'https://via.placeholder.com/120x40',
         colorScheme: {
           primary: '#4361ee',
           secondary: '#3f37c9',
@@ -217,7 +217,7 @@ export const templates: Template[] = [
         title: 'E-commerce Template',
         subtitle: 'Showcase your products beautifully',
         metaDescription: 'E-commerce landing page template to showcase your products',
-        logo: 'https://placeholder.pagebee.io/api/random//120/40',
+        logo: 'https://via.placeholder.com/120x40',
         colorScheme: {
           primary: '#4361ee',
           secondary: '#3f37c9',
@@ -282,7 +282,7 @@ export const templates: Template[] = [
         title: 'My Portfolio',
         subtitle: 'Showcasing my professional work',
         metaDescription: 'Professional portfolio website template',
-        logo: 'https://placeholder.pagebee.io/api/random//120/40',
+        logo: 'https://via.placeholder.com/120x40',
         colorScheme: {
           primary: '#4361ee',
           secondary: '#3f37c9',
@@ -306,7 +306,7 @@ export const templates: Template[] = [
         title: 'My Blog',
         subtitle: 'Thoughts, stories and ideas',
         metaDescription: 'Clean blog website template for content creators',
-        logo: 'https://placeholder.pagebee.io/api/random//120/40',
+        logo: 'https://via.placeholder.com/120x40',
         colorScheme: {
           primary: '#4361ee',
           secondary: '#3f37c9',
@@ -330,7 +330,7 @@ export const templates: Template[] = [
         title: 'Restaurant Name',
         subtitle: 'Fine dining experience',
         metaDescription: 'Restaurant website template with menu integration',
-        logo: 'https://placeholder.pagebee.io/api/random//120/40',
+        logo: 'https://via.placeholder.com/120x40',
         colorScheme: {
           primary: '#4361ee',
           secondary: '#3f37c9',
@@ -354,7 +354,7 @@ export const templates: Template[] = [
         title: 'Event Name',
         subtitle: 'Date and Location',
         metaDescription: 'Event landing page template to promote your upcoming events',
-        logo: 'https://placeholder.pagebee.io/api/random//120/40',
+        logo: 'https://via.placeholder.com/120x40',
         colorScheme: {
           primary: '#4361ee',
           secondary: '#3f37c9',

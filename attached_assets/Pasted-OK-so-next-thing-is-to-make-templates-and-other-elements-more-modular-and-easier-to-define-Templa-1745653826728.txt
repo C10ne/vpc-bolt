@@ -77,7 +77,7 @@ template {
 	}
 
 	editableProperties = {
-		logo: 'https://placeholder.pagebee.io/api/random//120/40',
+		logo: 'https://via.placeholder.com/120x40',
 		businessName: 'Lalalo",
 		address: 'Default fake address',
 		socialLinks: [

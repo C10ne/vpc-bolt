@@ -12,7 +12,7 @@ export const template: TemplateSettings = {
     metaDescription: 'Professional business website template with modern design',
   },
   themeSettings: {
-    logo: 'https://placeholder.pagebee.io/api/random//120/40',
+    logo: 'https://via.placeholder.com/120x40',
     colorScheme: {
       primary: '#4361ee',
       secondary: '#3f37c9',

@@ -15,7 +15,7 @@ export const elementExamplesTemplate: Template = {
       title: 'Element System Demo',
       subtitle: 'Showcasing modular HTML building blocks',
       metaDescription: 'Demo template showing the Element system with editable components',
-      logo: 'https://placeholder.pagebee.io/api/random//120/40',
+      logo: 'https://via.placeholder.com/120x40',
       colorScheme: {
         primary: '#3b82f6',
         secondary: '#6366f1',
