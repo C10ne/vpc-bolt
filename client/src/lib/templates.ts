@@ -1,5 +1,6 @@
 import { Template } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { elementExamplesTemplate } from './templates/element-examples';
 
 export const templates: Template[] = [
   {
@@ -365,4 +366,5 @@ export const templates: Template[] = [
       ],
     },
   },
+  elementExamplesTemplate,
 ];
