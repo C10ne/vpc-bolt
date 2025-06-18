@@ -86,6 +86,10 @@ export default function Editor() {
     setPreviewDevice(device);
   };
 
+  const handleTemplateSelect = (templateId: string) => {
+    navigate(`/editor/${templateId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -133,7 +137,8 @@ export default function Editor() {
         <TemplatesPanel 
           isVisible={showTemplatesPanel} 
           onToggle={toggleTemplatesPanel}
-          selectedTemplateId={params.id ? parseInt(params.id) : undefined}
+          selectedTemplateId={params.id}
+          onSelectTemplate={handleTemplateSelect}
         />
 
         <EditorPanel 
