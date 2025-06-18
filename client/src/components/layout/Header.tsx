@@ -1,3 +1,4 @@
+import React from 'react'; // Added React import
 import { Button } from "@/components/ui/button";
 import { useEditor } from "@/lib/editorContext";
 import { apiRequest } from "@/lib/queryClient";
