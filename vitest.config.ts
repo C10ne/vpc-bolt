@@ -4,7 +4,8 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom', // Changed to jsdom
+    setupFiles: ['./tests/setup.ts'], // Added setup file for jest-dom matchers
   },
   resolve: {
     alias: {
