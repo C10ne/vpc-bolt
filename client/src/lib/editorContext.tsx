@@ -68,18 +68,49 @@ const initialState: EditorState = {
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case 'SELECT_TEMPLATE': {
-      const templateId = action.payload;
+      const templateId = action.payload; // This is the ID of the template manifest/lite version
       const availableTemplates = state.templates?.length > 0 ? state.templates : (staticTemplates as unknown as Template[]);
-      const template = availableTemplates.find(t => t.id === templateId);
-      if (!template) { console.warn(`Template with id ${templateId} not found.`); return state; }
-      
-      // Ensure defaultPage has sections, if not, initialize to empty array
-      const defaultPageData = template.defaultPage as Page;
-      if (!defaultPageData.sections) {
-        defaultPageData.sections = [];
+      const selectedEditorTemplate = availableTemplates.find(t => t.id === templateId);
+
+      let pageToLoad: Page;
+
+      if (selectedEditorTemplate && selectedEditorTemplate.defaultPage) {
+        // If defaultPage exists, use it but ensure its structure is a valid Page
+        const defaultPageFromTemplate = selectedEditorTemplate.defaultPage as Page;
+        pageToLoad = {
+          id: defaultPageFromTemplate.id || uuidv4(),
+          name: defaultPageFromTemplate.name || selectedEditorTemplate.name || "Untitled Page",
+          templateId: selectedEditorTemplate.id,
+          sections: defaultPageFromTemplate.sections || [], // CRITICAL: Ensure sections array exists
+          globalSettings: defaultPageFromTemplate.globalSettings ||
+                          initialPageData.globalSettings, // Fallback globalSettings from our defined initialPageData
+        };
+      } else {
+        // Fallback to a fresh initial page structure if template or defaultPage is missing/invalid
+        pageToLoad = {
+          ...initialPageData, // Use the structure of initialPageData (defined above)
+          id: uuidv4(),
+          name: selectedEditorTemplate?.name || "New Blank Page",
+          templateId: selectedEditorTemplate?.id || `blank-${uuidv4()}`,
+        };
+        if (selectedEditorTemplate) {
+          console.warn(`Template "${selectedEditorTemplate.name}" does not have a valid defaultPage structure. Loading a blank page.`);
+        } else {
+          console.warn(`Template with id "${templateId}" not found. Loading a blank page.`);
+        }
       }
 
-      return {...state, currentPage: defaultPageData, templateSelected: true, selectedSection: null, selectedComponent: null, selectedItemRect: null, currentFocusedElementId: null, unsavedChanges: true };
+      return {
+        ...state,
+        // currentTemplateManifest: selectedEditorTemplate, // Optional: if we need to store the manifest
+        currentPage: pageToLoad,
+        templateSelected: true,
+        selectedSection: null,
+        selectedComponent: null,
+        currentFocusedElementId: null,
+        selectedItemRect: null,
+        unsavedChanges: false, // Loading a template is a fresh start, not an "unsaved change" from blank state
+      };
     }
     case 'SELECT_SECTION': {
       const newFocusedId = action.payload.sectionId ? `section-${action.payload.sectionId}` : null;
