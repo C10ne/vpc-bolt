@@ -42,9 +42,9 @@ export const template: TemplateData = {
           editable: 'editable' as EditableType,
           elements: [
             // Placeholder elements for styling, responsive selectors, preview buttons
-            elementRegistry.createElement('Paragraph', { properties: { text: '[Template Styling Controls Placeholder]' } }),
-            elementRegistry.createElement('Paragraph', { properties: { text: '[Responsive Preview Selectors Placeholder]' } }),
-            elementRegistry.createElement('Paragraph', { properties: { text: '[Preview Options/Buttons Placeholder]' } })
+            elementRegistry.createElement('paragraph', { properties: { text: '[Template Styling Controls Placeholder]' } }),
+            elementRegistry.createElement('paragraph', { properties: { text: '[Responsive Preview Selectors Placeholder]' } }),
+            elementRegistry.createElement('paragraph', { properties: { text: '[Preview Options/Buttons Placeholder]' } })
           ].filter(Boolean) as ElementData[],
           parameters: { layout: 'space-between', alignment: 'center' } // Example parameters
         }
@@ -73,21 +73,21 @@ export const template: TemplateData = {
           id: uuidv4(),
           type: 'ShowcaseHeading' as ComponentType,
           editable: 'editable' as EditableType,
-          elements: [elementRegistry.createElement('Heading', { properties: { text: 'Showcase Heading Element', level: 'h1' } })].filter(Boolean) as ElementData[],
+          elements: [elementRegistry.createElement('heading', { properties: { text: 'Showcase Heading Element', level: 'h1' } })].filter(Boolean) as ElementData[],
           parameters: {}
         },
         {
           id: uuidv4(),
           type: 'ShowcaseParagraph' as ComponentType,
           editable: 'editable' as EditableType,
-          elements: [elementRegistry.createElement('Paragraph', { properties: { text: 'This is a showcase paragraph with  clichés. It will support WYSIWYG.' } })].filter(Boolean) as ElementData[],
+          elements: [elementRegistry.createElement('paragraph', { properties: { text: 'This is a showcase paragraph with  clichés. It will support WYSIWYG.' } })].filter(Boolean) as ElementData[],
           parameters: {}
         },
         {
           id: uuidv4(),
           type: 'ShowcaseImage' as ComponentType,
           editable: 'editable' as EditableType,
-          elements: [elementRegistry.createElement('Image', { properties: { src: 'https://via.placeholder.com/600x300?text=Showcase+Image', alt: 'Showcase Image' } })].filter(Boolean) as ElementData[],
+          elements: [elementRegistry.createElement('image', { properties: { src: 'https://via.placeholder.com/600x300?text=Showcase+Image', alt: 'Showcase Image' } })].filter(Boolean) as ElementData[],
           parameters: {}
         },
         {
@@ -95,14 +95,14 @@ export const template: TemplateData = {
           type: 'ShowcaseGroup' as ComponentType,
           editable: 'editable' as EditableType,
           elements: [
-            elementRegistry.createElement('Group', {
+            elementRegistry.createElement('text-group', {
               properties: {
                 layout: 'horizontal',
                 gap: '10px',
                 alignment: 'center',
                 elements: [
-                  elementRegistry.createElement('Image', { properties: { src: 'https://via.placeholder.com/32x32?text=Icon', alt: 'Icon', width: '32px', height: '32px' } }),
-                  elementRegistry.createElement('Paragraph', { properties: { text: 'Form element with icon placeholder' } })
+                  elementRegistry.createElement('image', { properties: { src: 'https://via.placeholder.com/32x32?text=Icon', alt: 'Icon', width: '32px', height: '32px' } }),
+                  elementRegistry.createElement('paragraph', { properties: { text: 'Form element with icon placeholder' } })
                 ].filter(Boolean) as ElementData[]
               }
             })
@@ -129,7 +129,7 @@ export const template: TemplateData = {
           type: 'InspectorPlaceholder' as ComponentType,
           editable: 'locked' as EditableType,
           elements: [
-            elementRegistry.createElement('Paragraph', { properties: { text: 'Right Sidebar: Selected element details and editable options will appear here.' } })
+            elementRegistry.createElement('paragraph', { properties: { text: 'Right Sidebar: Selected element details and editable options will appear here.' } })
           ].filter(Boolean) as ElementData[],
           parameters: {}
         }
