@@ -1,6 +1,7 @@
 import { Template } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { elementExamplesTemplate } from './templates/element-examples';
+import { template as showcaseTemplate } from './templates/showcase/template';
 
 export const templates: Template[] = [
   {
@@ -367,4 +368,5 @@ export const templates: Template[] = [
     },
   },
   elementExamplesTemplate,
+  showcaseTemplate,
 ];
