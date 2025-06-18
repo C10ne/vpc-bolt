@@ -23,14 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { componentDefinitions } from "@/lib/components/definitions";
-import { v4 as uuidv4 } from 'uuid'; // Import uuid
+import { v4 as uuidv4 } from 'uuid';
+import { useEditor } from "@/lib/editorContext"; // Import useEditor
 
-// Changed generateId to return string UUID for local default element creation (e.g. in component swap)
 const generateId = (): string => uuidv4();
 
 interface InspectorPanelProps {
   template: TemplateData;
-  selectedElementId: string | null; // This is the prefixed ID, e.g., "section-uuid"
+  selectedElementId: string | null;
   onUpdateTemplate: (updatedTemplate: TemplateData) => void;
   showPanel: boolean;
   onTogglePanel: () => void;
@@ -45,6 +45,10 @@ export default function InspectorPanel({
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState("properties");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Get state and toggleUserLevel from useEditor
+  const { state: editorState, toggleUserLevel } = useEditor();
+  const { currentUserLevel } = editorState;
 
   const {
     elementType: currentElementType,
@@ -63,25 +67,25 @@ export default function InspectorPanel({
       return { elementType: "template", element: template };
     }
     if (selectedElementId.startsWith("section-")) {
-      const sectionId = selectedElementId.replace("section-", ""); // ID is now string
-      const section = template.sections.find((s) => s.id === sectionId); // String comparison
+      const sectionId = selectedElementId.replace("section-", "");
+      const section = template.sections.find((s) => s.id === sectionId);
       return { elementType: "section", element: section || null, section };
     }
     if (selectedElementId.startsWith("component-")) {
-      const [, sectionId, componentId] = selectedElementId.split("-"); // IDs are strings
-      const section = template.sections.find((s) => s.id === sectionId); // String comparison
+      const [, sectionId, componentId] = selectedElementId.split("-");
+      const section = template.sections.find((s) => s.id === sectionId);
       if (section) {
-        const component = section.components.find((c) => c.id === componentId); // String comparison
+        const component = section.components.find((c) => c.id === componentId);
         return { elementType: "component", element: component || null, section, component };
       }
     }
     if (selectedElementId.startsWith("element-")) {
-      const [, sectionId, componentId, elementId] = selectedElementId.split("-"); // IDs are strings
-      const section = template.sections.find((s) => s.id === sectionId); // String comparison
+      const [, sectionId, componentId, elementId] = selectedElementId.split("-");
+      const section = template.sections.find((s) => s.id === sectionId);
       if (section) {
-        const component = section.components.find((c) => c.id === componentId); // String comparison
+        const component = section.components.find((c) => c.id === componentId);
         if (component) {
-          const element = component.elements.find((e) => e.id === elementId); // String comparison
+          const element = component.elements.find((e) => e.id === elementId);
           return { elementType: "element", element: element || null, section, component };
         }
       }
@@ -132,7 +136,6 @@ export default function InspectorPanel({
     let newParameters: Record<string, any> = {};
 
     if (definition) {
-      // newId() now returns string UUIDs
       newElements = definition.defaultElements.map(el => ({ ...el, id: generateId() }));
       newParameters = { ...(definition.defaultParameters || {}) };
     }
@@ -157,7 +160,6 @@ export default function InspectorPanel({
 
     if (!freshElementType || !freshSelectedObj) return;
 
-    // All ID comparisons are now string to string
     if (freshElementType === "template") {
       onUpdateTemplate({ ...template, ...updatedData });
     } else if (freshElementType === "section" && freshParentSection) {
@@ -194,10 +196,6 @@ export default function InspectorPanel({
   };
 
   const renderElementProperties = () => {
-    // ... (rest of renderElementProperties - no changes to its internal logic needed due to ID type change,
-    // as comparisons are on `currentSelectedObject.id` which is now string, and IDs in UI are for display/keys)
-    // The existing JSX for displaying IDs will just display the string UUIDs.
-    // All IDs passed to Label htmlFor or Input id should be strings, which they are.
     if (!currentSelectedObject) {
       return <div className="text-center p-4 text-gray-500">Select an element to edit its properties</div>;
     }
@@ -241,7 +239,7 @@ export default function InspectorPanel({
       const currentProps = currentElementTyped.properties || {};
       const isElementContentLocked = parentComponentOfSelected?.editable === 'locked-edit';
 
-      let elementSpecificUI;
+      let elementSpecificUI; // Content filled by switch cases below
       switch (currentElementTyped.type) {
         case 'Heading':
           elementSpecificUI = (
@@ -313,16 +311,23 @@ export default function InspectorPanel({
 
     if (currentElementType === "component" && currentSelectedObject) {
       const currentComponent = currentSelectedObject as ComponentData;
-      const isComponentContentLocked = currentComponent.editable === 'locked-edit';
+      const isComponentItselfLockedForEdit = currentComponent.editable === 'locked-edit'; // For component's own params, if any
       const isComponentLockedForReplaceBySelf = currentComponent.editable === 'locked-replacing';
       const isComponentLockedForReplaceByParent = parentSectionOfSelected?.editable === 'locked-replacing';
-      const disableSwapUI = isComponentLockedForReplaceBySelf || isComponentLockedForReplaceByParent;
+      const isProFeatureLocked = currentUserLevel === 'free';
+
+      const finalDisableSwapUI = isComponentLockedForReplaceBySelf || isComponentLockedForReplaceByParent || isProFeatureLocked;
+
+      let swapDisabledReason = "";
+      if (isComponentLockedForReplaceBySelf) swapDisabledReason = "This component type itself is locked for replacing.";
+      else if (isComponentLockedForReplaceByParent) swapDisabledReason = "Components in this parent section are locked for replacing.";
+      else if (isProFeatureLocked) swapDisabledReason = "Component Swapping is a Pro feature.";
 
       const componentInfo = (
         <div className="space-y-3 p-1">
           <h3 className="text-sm font-semibold">Component: {currentComponent.type} (ID: {currentComponent.id})</h3>
-          <div><Label>Editable Status: <Badge variant={isComponentContentLocked ? "destructive" : "default"}>{currentComponent.editable}</Badge></Label></div>
-          {parentSectionOfSelected && <Label className="text-xs">Parent Section Editable: <Badge variant={parentSectionOfSelected.editable === 'locked-replacing' ? 'destructive' : 'default'}>{parentSectionOfSelected.editable}</Badge></Label>}
+          <div><Label>Editable Status: <Badge variant={isComponentItselfLockedForEdit ? "destructive" : "default"}>{currentComponent.editable}</Badge></Label></div>
+          {parentSectionOfSelected && <Label className="text-xs">Parent Section Lock: <Badge variant={parentSectionOfSelected.editable === 'locked-replacing' || parentSectionOfSelected.editable === 'locked-edit' ? 'warning' : 'default'}>{parentSectionOfSelected.editable}</Badge></Label>}
           {currentComponent.parameters && Object.keys(currentComponent.parameters).length > 0 && (
             <div><Label>Parameters:</Label><pre className="text-xs bg-gray-100 p-2 rounded mt-1 max-h-28 overflow-auto">{JSON.stringify(currentComponent.parameters, null, 2)}</pre></div>
           )}
@@ -336,9 +341,16 @@ export default function InspectorPanel({
           <>
             {componentInfo}
             <div className="mt-4 pt-4 border-t">
-              <Label htmlFor="component-swap-select" className="text-sm font-medium text-gray-700 block mb-1">Swap with another component:</Label>
-              <Select onValueChange={(value) => { if (value) handleComponentSwap(value as ComponentType); }} disabled={disableSwapUI}>
-                <SelectTrigger id="component-swap-select" className="w-full"><SelectValue placeholder="Select a component type..." /></SelectTrigger>
+              <Label htmlFor="component-swap-select" className={cn("text-sm font-medium text-gray-700 block mb-1", finalDisableSwapUI && "text-gray-400")}>
+                Swap with another component:
+              </Label>
+              <Select
+                onValueChange={(value) => { if (value && !finalDisableSwapUI) handleComponentSwap(value as ComponentType); }}
+                disabled={finalDisableSwapUI}
+              >
+                <SelectTrigger id="component-swap-select" className="w-full">
+                  <SelectValue placeholder="Select a component type..." />
+                </SelectTrigger>
                 <SelectContent>
                   {currentComponent.swappableWith.map(swapType => {
                     const def = componentDefinitions.find(d => d.type === swapType);
@@ -346,7 +358,15 @@ export default function InspectorPanel({
                   })}
                 </SelectContent>
               </Select>
-              {disableSwapUI && <p className="text-xs text-red-500 mt-1">Swapping is disabled.</p>}
+              {finalDisableSwapUI && swapDisabledReason && (
+               <p className="text-xs text-gray-500 mt-1">{swapDisabledReason}
+                 {isProFeatureLocked && !(isComponentLockedForReplaceBySelf || isComponentLockedForReplaceByParent) && toggleUserLevel && (
+                   <Button variant="link" size="xs" className="p-0 h-auto text-amber-600 hover:text-amber-700 ml-1" onClick={toggleUserLevel}>
+                     (Try Pro?)
+                   </Button>
+                 )}
+               </p>
+             )}
             </div>
           </>
         );

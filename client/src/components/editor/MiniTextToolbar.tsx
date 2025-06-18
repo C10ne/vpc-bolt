@@ -22,17 +22,20 @@ const MiniTextToolbar: React.FC = () => {
 
     let isEligibleForToolbar = false;
     if (currentFocusedElementId.startsWith('element-')) {
-      const [, sectionIdStr, componentIdStr, elementIdStr] = currentFocusedElementId.split('-');
-      const sectionIdNum = parseInt(sectionIdStr);
-      const componentIdNum = parseInt(componentIdStr);
-      const elementIdNum = parseInt(elementIdStr);
+      // IDs are now strings (UUIDs), no parseInt needed.
+      const [, sectionId, componentId, elementId] = currentFocusedElementId.split('-');
 
-      const section = (currentPage.sections as unknown as SchemaSection[]).find(s => s.id === sectionIdNum);
-      const component = section?.components.find(c => c.id === componentIdNum);
-      const element = component?.elements.find(e => e.id === elementIdNum);
+      const sections = (currentPage.sections || []) as SchemaSection[];
+      const section = sections.find(s => s.id === sectionId); // String comparison
+      if (section) {
+        const components = (section.components || []) as SchemaComponent[];
+        const component = components.find(c => c.id === componentId); // String comparison
+        if (component) {
+          const elements = (component.elements || []) as SchemaElement[];
+          const element = elements.find(e => e.id === elementId); // String comparison
 
-      if (element && (element.type === 'Paragraph' || element.type === 'RichText')) {
-        if (component && component.editable !== 'locked-edit') {
+          if (element && (element.type === 'Paragraph' || element.type === 'RichText')) {
+            if (component.editable !== 'locked-edit') {
           isEligibleForToolbar = true;
         }
       }
