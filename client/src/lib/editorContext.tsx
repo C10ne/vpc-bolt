@@ -8,7 +8,7 @@ import {
 } from '@shared/schema';
 import { EditorState as AppEditorState, Page, Section, Component, ComponentType, Template } from './types';
 import { templates as staticTemplates } from './templates';
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for initialPageData ID
+import { v4 as uuidv4 } from 'uuid';
 
 export interface EditorState extends AppEditorState {
   selectedItemRect: DOMRect | null;
@@ -37,9 +37,9 @@ type EditorAction =
   | { type: 'UPDATE_ELEMENT_CONTENT'; payload: { path: ElementPath; newContent: string; elementType: 'Paragraph' | 'RichText' } }
   | { type: 'TOGGLE_USER_LEVEL' };
 
-// Define a minimal valid Page structure for initialization
 const initialPageData: Page = {
-  templateId: 'empty-template-id', // Or generate a UUID
+  templateId: `blank-${uuidv4()}`,
+  id: uuidv4(),
   name: 'New Page',
   globalSettings: {
     title: 'New Page',
@@ -48,12 +48,12 @@ const initialPageData: Page = {
     logo: '',
     colorScheme: { primary: '#4361ee', secondary: '#3f37c9', accent: '#4cc9f0'}
   },
-  sections: [], // CRITICAL: Initialize with empty sections array
+  sections: [],
 };
 
 const initialState: EditorState = {
   templates: [],
-  currentPage: initialPageData, // Use the well-defined initial Page data
+  currentPage: initialPageData,
   templateSelected: false,
   selectedSection: null,
   selectedComponent: null,
@@ -68,33 +68,31 @@ const initialState: EditorState = {
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case 'SELECT_TEMPLATE': {
-      const templateId = action.payload; // This is the ID of the template manifest/lite version
+      const templateId = action.payload;
       const availableTemplates = state.templates?.length > 0 ? state.templates : (staticTemplates as unknown as Template[]);
       const selectedEditorTemplate = availableTemplates.find(t => t.id === templateId);
 
       let pageToLoad: Page;
 
       if (selectedEditorTemplate && selectedEditorTemplate.defaultPage) {
-        // If defaultPage exists, use it but ensure its structure is a valid Page
         const defaultPageFromTemplate = selectedEditorTemplate.defaultPage as Page;
         pageToLoad = {
           id: defaultPageFromTemplate.id || uuidv4(),
           name: defaultPageFromTemplate.name || selectedEditorTemplate.name || "Untitled Page",
           templateId: selectedEditorTemplate.id,
-          sections: defaultPageFromTemplate.sections || [], // CRITICAL: Ensure sections array exists
+          sections: defaultPageFromTemplate.sections || [],
           globalSettings: defaultPageFromTemplate.globalSettings ||
-                          initialPageData.globalSettings, // Fallback globalSettings from our defined initialPageData
+                          initialPageData.globalSettings,
         };
       } else {
-        // Fallback to a fresh initial page structure if template or defaultPage is missing/invalid
         pageToLoad = {
-          ...initialPageData, // Use the structure of initialPageData (defined above)
+          ...initialPageData,
           id: uuidv4(),
           name: selectedEditorTemplate?.name || "New Blank Page",
           templateId: selectedEditorTemplate?.id || `blank-${uuidv4()}`,
         };
         if (selectedEditorTemplate) {
-          console.warn(`Template "${selectedEditorTemplate.name}" does not have a valid defaultPage structure. Loading a blank page.`);
+          console.warn(`Template "${selectedEditorTemplate.name}" does not have a valid defaultPage structure or defaultPage is missing. Loading a blank page.`);
         } else {
           console.warn(`Template with id "${templateId}" not found. Loading a blank page.`);
         }
@@ -102,16 +100,16 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
       return {
         ...state,
-        // currentTemplateManifest: selectedEditorTemplate, // Optional: if we need to store the manifest
         currentPage: pageToLoad,
         templateSelected: true,
         selectedSection: null,
         selectedComponent: null,
         currentFocusedElementId: null,
         selectedItemRect: null,
-        unsavedChanges: false, // Loading a template is a fresh start, not an "unsaved change" from blank state
+        unsavedChanges: false,
       };
     }
+    // ... (rest of the reducer cases from turn 46, ensuring guards and string ID logic are preserved) ...
     case 'SELECT_SECTION': {
       const newFocusedId = action.payload.sectionId ? `section-${action.payload.sectionId}` : null;
       return {...state, selectedSection: action.payload.sectionId, selectedComponent: null, selectedItemRect: action.payload.rect, currentFocusedElementId: newFocusedId };
@@ -122,19 +120,19 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     }
     case 'UPDATE_SECTION': {
       const updatedSection = action.payload;
-      if (!state.currentPage?.sections) return state; // Guard
+      if (!state.currentPage?.sections) return state;
       return {...state, currentPage: {...state.currentPage, sections: state.currentPage.sections.map(s => (s as unknown as SchemaSection).id === updatedSection.id ? (updatedSection as unknown as Section) : s)}, unsavedChanges: true };
     }
     case 'UPDATE_COMPONENT': {
       const { sectionId: targetSectionId, component: updatedComponent } = action.payload;
-      if (!state.currentPage?.sections) return state; // Guard
+      if (!state.currentPage?.sections) return state;
       return {
         ...state,
         currentPage: {
           ...state.currentPage,
           sections: state.currentPage.sections.map(section => {
             if ((section as unknown as SchemaSection).id === targetSectionId) {
-              if (!section.components) return section; // Guard
+              if (!section.components) return section;
               return { ...section, components: section.components.map(c => (c as unknown as SchemaComponent).id === updatedComponent.id ? (updatedComponent as unknown as Component) : c)};
             }
             return section;
@@ -145,12 +143,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     }
     case 'REPLACE_COMPONENT': {
       const { sectionId, componentId, newType } = action.payload;
-      if (!state.currentPage?.sections) return state; // Guard
+      if (!state.currentPage?.sections) return state;
       let newCurrentPage = { ...state.currentPage };
       const sectionIndex = state.currentPage.sections.findIndex(s => (s as unknown as SchemaSection).id === sectionId);
       if (sectionIndex !== -1) {
         const targetSection = state.currentPage.sections[sectionIndex];
-        if (!targetSection.components) return state; // Guard
+        if (!targetSection.components) return state;
         const componentIndex = targetSection.components.findIndex(c => (c as unknown as SchemaComponent).id === componentId);
         if (componentIndex !== -1) {
           const oldComponent = targetSection.components[componentIndex] as unknown as SchemaComponent;
@@ -178,7 +176,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         const sectionIndex = newSections.findIndex(s => (s as unknown as SchemaSection).id === sectionIdStr);
         if (sectionIndex !== -1) {
           const parentSection = newSections[sectionIndex] as unknown as SchemaSection;
-          if (!parentSection.components) return state; // Guard
+          if (!parentSection.components) return state;
           const componentToDelete = parentSection.components.find(c => (c as unknown as SchemaComponent).id === componentIdStr);
           if (componentToDelete) {
             if ((componentToDelete as unknown as SchemaComponent).editable === 'locked-edit' || parentSection.editable === 'locked-replacing') { console.warn(`Component or parent section is locked.`); return state; }
@@ -191,13 +189,13 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {...state, currentPage: { ...state.currentPage, sections: newSections }, currentFocusedElementId: null, selectedItemRect: null, selectedSection: null, selectedComponent: null, unsavedChanges: true };
     }
     case 'UPDATE_ELEMENT_CONTENT': {
-      if (!state.currentPage?.sections) return state; // Guard
+      if (!state.currentPage?.sections) return state;
       const { path, newContent, elementType } = action.payload;
       const newCurrentPage = JSON.parse(JSON.stringify(state.currentPage)) as Page;
       const section = (newCurrentPage.sections as unknown as SchemaSection[]).find(s => s.id === path.sectionId);
-      if (section && section.components) { // Guard components
+      if (section && section.components) {
         const component = section.components.find(c => c.id === path.componentId);
-        if (component && component.elements) { // Guard elements
+        if (component && component.elements) {
           const element = component.elements.find(e => e.id === path.elementId);
           if (element) {
             if (!element.properties) element.properties = {};
@@ -215,7 +213,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case 'SAVE_PAGE': return { ...state, unsavedChanges: false };
     case 'HYDRATE_STATE':
       const pageToHydrate = action.payload;
-      if (!pageToHydrate.sections) pageToHydrate.sections = []; // Ensure sections array exists
+      if (!pageToHydrate.sections) pageToHydrate.sections = [];
       return {...state, currentPage: pageToHydrate, templateSelected: true, unsavedChanges: false, selectedSection: null, selectedComponent: null, selectedItemRect: null, currentFocusedElementId: null };
     default:
       return state;
@@ -273,7 +271,7 @@ export function EditorProvider({ children }: EditorProviderProps) {
     const updatedProperties = updates.properties ? { ...currentSection.properties, ...updates.properties } : currentSection.properties;
     const updatedSectionData = { ...(currentSection as unknown as SchemaSection), ...updates, properties: updatedProperties };
     dispatch({ type: 'UPDATE_SECTION', payload: updatedSectionData });
-  }, [state.currentPage]); // Changed dependency
+  }, [state.currentPage]);
   
   const updateComponent = useCallback((sectionId: string, componentId: string, updates: Partial<SchemaComponent>) => {
     if (!state.currentPage || !state.currentPage.sections) {
@@ -289,15 +287,11 @@ export function EditorProvider({ children }: EditorProviderProps) {
     if (!component) return;
     const updatedComponentData = { ...(component as unknown as SchemaComponent), ...updates };
     dispatch({ type: 'UPDATE_COMPONENT', payload: { sectionId, component: updatedComponentData } });
-  }, [state.currentPage]); // Changed dependency
+  }, [state.currentPage]);
 
   const updateElementContent = useCallback((path: ElementPath, newContent: string, elementType: 'Paragraph' | 'RichText') => {
-    // This function dispatches an action that uses state.currentPage.
-    // For consistency and to avoid potential stale closures if it were to access state directly,
-    // we can keep its dependency array empty if dispatch is stable, or add state.currentPage if its logic moves here.
-    // Since all logic is in reducer, `[]` or `[dispatch]` is fine.
     dispatch({ type: 'UPDATE_ELEMENT_CONTENT', payload: { path, newContent, elementType } });
-  }, []); // Dispatch is stable
+  }, []);
   
   const replaceComponent = useCallback((sectionId: string, componentId: string, newType: SchemaComponentType) => dispatch({ type: 'REPLACE_COMPONENT', payload: { sectionId, componentId, newType } }), []);
   const deleteSelectedItem = useCallback(() => dispatch({ type: 'DELETE_SELECTED_ITEM' }), []);
@@ -319,7 +313,7 @@ export function EditorProvider({ children }: EditorProviderProps) {
     const schemaComp = componentToUpdate as unknown as SchemaComponent;
     const updatedComp: SchemaComponent = { ...schemaComp, properties: { ...(schemaComp.properties || {}), [key]: value }};
     dispatch({ type: 'UPDATE_COMPONENT', payload: { sectionId: state.selectedSection, component: updatedComp } });
-  }, [state.currentPage, state.selectedSection, state.selectedComponent]); // Updated dependencies
+  }, [state.currentPage, state.selectedSection, state.selectedComponent]);
   
   const togglePreviewMode = useCallback(() => setPreviewMode(prev => !prev), []);
   const hydrateState = useCallback((page: Page) => dispatch({ type: 'HYDRATE_STATE', payload: page }), []);
