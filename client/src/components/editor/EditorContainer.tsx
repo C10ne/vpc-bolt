@@ -1,16 +1,16 @@
-import { useEditor } from "@/lib/editorContext";
+import { useEditor } from "@/lib/editorContext"; // EditPanel import removed
 import ContentCanvas from "./ContentCanvas";
-import EditPanel from "./EditPanel";
+// import EditPanel from "./EditPanel"; // Removed
 
 export default function EditorContainer() {
-  const { state } = useEditor();
+  // const { state } = useEditor(); // state is no longer needed here
 
   return (
     <div className="w-full flex h-full">
       <ContentCanvas />
 
-      {/* Only show the edit panel if a section is selected */}
-      {state.selectedSection && <EditPanel />}
+      {/* EditPanel rendering removed */}
+      {/* {state.selectedSection && <EditPanel />} */}
     </div>
   );
 }

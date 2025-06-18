@@ -26,7 +26,8 @@ export default function ElementEditor({
   onDelete,
   onClose
 }: ElementEditorProps) {
-  const [localChanges, setLocalChanges] = useState<Partial<Element>>({});
+  // Local changes state removed for now, assuming parent will manage state via onUpdate
+  // const [localChanges, setLocalChanges] = useState<Partial<Element>>({});
 
   if (!element) {
     return (
@@ -44,48 +45,27 @@ export default function ElementEditor({
   }
 
   const definition = elementRegistry.getDefinition(element.type);
-  const mergedElement = { ...element, ...localChanges };
+  // Use element directly as mergedElement, as localChanges is removed.
+  // Parent (InspectorPanel) will manage the state and pass updated element.
+  const mergedElement = element;
 
-  const handleChange = (field: string, value: any) => {
-    const updates = { ...localChanges };
-    
-    // Handle nested field updates
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      updates[parent as keyof Element] = {
-        ...(mergedElement as any)[parent],
-        [child]: value
-      };
-    } else {
-      updates[field as keyof Element] = value;
-    }
-    
-    setLocalChanges(updates);
-    onUpdate?.(updates);
+  const handlePropertyChange = (propertyName: string, value: any) => {
+    const newProperties = {
+      ...mergedElement.properties,
+      [propertyName]: value,
+    };
+    // Call onUpdate with the new complete properties object
+    // The onUpdate signature is Partial<Element>, so we send { properties: newProperties }
+    onUpdate?.({ properties: newProperties });
   };
 
-  const handleContentChange = (field: string, value: any) => {
-    handleChange('content', {
-      ...mergedElement.content,
-      [field]: value
-    });
-  };
-
-  const handleStyleChange = (field: string, value: any) => {
-    handleChange('style', {
-      ...mergedElement.style,
-      [field]: value
-    });
-  };
-
-  const handlePropertiesChange = (field: string, value: any) => {
-    handleChange('properties', {
-      ...(mergedElement as any).properties,
-      [field]: value
-    });
-  };
+  // renderContentEditor and renderStyleEditor will now use mergedElement.properties directly
+  // and call handlePropertyChange.
 
   const renderContentEditor = () => {
+    // Ensure element.properties exists, defaulting to empty object if not
+    const props = mergedElement.properties || {};
+
     switch (element.type) {
       case 'heading':
         return (
@@ -94,16 +74,16 @@ export default function ElementEditor({
               <Label htmlFor="heading-text">Text</Label>
               <Input
                 id="heading-text"
-                value={(mergedElement.content as any).text || ''}
-                onChange={(e) => handleContentChange('text', e.target.value)}
+                value={props.text || ''}
+                onChange={(e) => handlePropertyChange('text', e.target.value)}
                 placeholder="Heading text"
               />
             </div>
             <div>
               <Label htmlFor="heading-level">Heading Level</Label>
               <Select
-                value={(mergedElement.content as any).level || 'h2'}
-                onValueChange={(value) => handleContentChange('level', value as HeadingLevel)}
+                value={props.level || 'h2'}
+                onValueChange={(value) => handlePropertyChange('level', value as HeadingLevel)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -128,8 +108,8 @@ export default function ElementEditor({
               <Label htmlFor="paragraph-text">Text</Label>
               <Textarea
                 id="paragraph-text"
-                value={(mergedElement.content as any).text || ''}
-                onChange={(e) => handleContentChange('text', e.target.value)}
+                value={props.text || ''}
+                onChange={(e) => handlePropertyChange('text', e.target.value)}
                 placeholder="Paragraph text"
                 rows={4}
               />
@@ -145,8 +125,8 @@ export default function ElementEditor({
               <Input
                 id="image-src"
                 type="url"
-                value={(mergedElement.content as any).src || ''}
-                onChange={(e) => handleContentChange('src', e.target.value)}
+                value={props.src || ''}
+                onChange={(e) => handlePropertyChange('src', e.target.value)}
                 placeholder="https://example.com/image.jpg"
               />
             </div>
@@ -154,8 +134,8 @@ export default function ElementEditor({
               <Label htmlFor="image-alt">Alt Text</Label>
               <Input
                 id="image-alt"
-                value={(mergedElement.content as any).alt || ''}
-                onChange={(e) => handleContentChange('alt', e.target.value)}
+                value={props.alt || ''}
+                onChange={(e) => handlePropertyChange('alt', e.target.value)}
                 placeholder="Describe the image"
               />
             </div>
@@ -163,16 +143,16 @@ export default function ElementEditor({
               <Label htmlFor="image-caption">Caption</Label>
               <Input
                 id="image-caption"
-                value={(mergedElement.content as any)?.caption || ''}
-                onChange={(e) => handleContentChange('caption', e.target.value)}
+                value={props.caption || ''}
+                onChange={(e) => handlePropertyChange('caption', e.target.value)}
                 placeholder="Image caption"
               />
             </div>
             <div>
               <Label htmlFor="object-fit">Object Fit</Label>
               <Select
-                value={(mergedElement as any).properties?.objectFit || 'cover'}
-                onValueChange={(value) => handlePropertiesChange('objectFit', value)}
+                value={props.objectFit || 'cover'}
+                onValueChange={(value) => handlePropertyChange('objectFit', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -194,8 +174,8 @@ export default function ElementEditor({
               <Label htmlFor="button-text">Button Text</Label>
               <Input
                 id="button-text"
-                value={(mergedElement.content as any).text || ''}
-                onChange={(e) => handleContentChange('text', e.target.value)}
+                value={props.text || ''}
+                onChange={(e) => handlePropertyChange('text', e.target.value)}
                 placeholder="Button text"
               />
             </div>
@@ -204,16 +184,16 @@ export default function ElementEditor({
               <Input
                 id="button-href"
                 type="url"
-                value={(mergedElement.content as any).href || ''}
-                onChange={(e) => handleContentChange('href', e.target.value)}
+                value={props.href || ''}
+                onChange={(e) => handlePropertyChange('href', e.target.value)}
                 placeholder="https://example.com"
               />
             </div>
             <div>
               <Label htmlFor="button-variant">Style</Label>
               <Select
-                value={(mergedElement as any).properties?.variant || 'primary'}
-                onValueChange={(value) => handlePropertiesChange('variant', value)}
+                value={props.variant || 'primary'}
+                onValueChange={(value) => handlePropertyChange('variant', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -228,8 +208,8 @@ export default function ElementEditor({
             <div>
               <Label htmlFor="button-size">Size</Label>
               <Select
-                value={(mergedElement as any).properties?.size || 'md'}
-                onValueChange={(value) => handlePropertiesChange('size', value)}
+                value={props.size || 'md'}
+                onValueChange={(value) => handlePropertyChange('size', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -251,8 +231,8 @@ export default function ElementEditor({
               <Label htmlFor="field-label">Label</Label>
               <Input
                 id="field-label"
-                value={(mergedElement.content as any).label || ''}
-                onChange={(e) => handleContentChange('label', e.target.value)}
+                value={props.label || ''}
+                onChange={(e) => handlePropertyChange('label', e.target.value)}
                 placeholder="Field label"
               />
             </div>
@@ -260,16 +240,16 @@ export default function ElementEditor({
               <Label htmlFor="field-placeholder">Placeholder</Label>
               <Input
                 id="field-placeholder"
-                value={(mergedElement.content as any).placeholder || ''}
-                onChange={(e) => handleContentChange('placeholder', e.target.value)}
+                value={props.placeholder || ''}
+                onChange={(e) => handlePropertyChange('placeholder', e.target.value)}
                 placeholder="Placeholder text"
               />
             </div>
             <div>
               <Label htmlFor="field-type">Field Type</Label>
               <Select
-                value={(mergedElement as any).properties?.fieldType || 'text'}
-                onValueChange={(value) => handlePropertiesChange('fieldType', value as FormFieldType)}
+                value={props.fieldType || 'text'}
+                onValueChange={(value) => handlePropertyChange('fieldType', value as FormFieldType)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -286,8 +266,8 @@ export default function ElementEditor({
             <div className="flex items-center space-x-2">
               <Switch
                 id="field-required"
-                checked={(mergedElement.content as any).required || false}
-                onCheckedChange={(checked) => handleContentChange('required', checked)}
+                checked={props.required || false}
+                onCheckedChange={(checked) => handlePropertyChange('required', checked)}
               />
               <Label htmlFor="field-required">Required field</Label>
             </div>
@@ -295,39 +275,159 @@ export default function ElementEditor({
         );
 
       default:
+        // Attempt to render based on definition.editableProperties if available
+        if (definition?.editableProperties) {
+          return (
+            <div className="space-y-3">
+              {definition.editableProperties.map(propName => (
+                <div key={propName}>
+                  <Label htmlFor={`prop-${propName}`}>{propName.charAt(0).toUpperCase() + propName.slice(1)}</Label>
+                  <Input
+                    id={`prop-${propName}`}
+                    value={props[propName] || ''}
+                    onChange={(e) => handlePropertyChange(propName, e.target.value)}
+                    placeholder={`Enter ${propName}`}
+                  />
+                </div>
+              ))}
+            </div>
+          );
+        }
         return (
           <p className="text-sm text-gray-500">
-            No editor available for {element.type} elements.
+            No specific editor for {element.type} elements. Generic editor based on definition used if available.
           </p>
         );
     }
   };
 
-  const renderStyleEditor = () => (
-    <div className="space-y-3">
-      <div>
-        <Label htmlFor="text-color">Text Color</Label>
-        <Input
-          id="text-color"
-          type="color"
-          value={mergedElement.style?.textColor || '#000000'}
-          onChange={(e) => handleStyleChange('textColor', e.target.value)}
-        />
+  const renderStyleEditor = () => {
+    // Example style properties that might be in element.properties
+    const props = mergedElement.properties || {};
+    // This section can be expanded or made dynamic using definition.editableProperties if some are style-specific
+    return (
+      <div className="space-y-3">
+        <div>
+          <Label htmlFor="text-color">Text Color</Label>
+          <Input
+            id="text-color"
+            type="color" // Using input type color for simplicity, can be enhanced
+            value={props.textColor || '#000000'}
+            onChange={(e) => handlePropertyChange('textColor', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="bg-color">Background Color</Label>
+          <Input
+            id="bg-color"
+            type="color"
+            value={props.backgroundColor || '#ffffff'}
+            onChange={(e) => handlePropertyChange('backgroundColor', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="text-align">Text Alignment</Label>
+          <Select
+            value={props.textAlign || 'left'}
+            onValueChange={(value) => handlePropertyChange('textAlign', value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="right">Right</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Add more common style properties here, e.g., padding, margin, fontSize, fontWeight */}
+        <div>
+          <Label htmlFor="padding">Padding (e.g., 10px, 5px 10px)</Label>
+          <Input
+            id="padding"
+            value={props.padding || ''}
+            onChange={(e) => handlePropertyChange('padding', e.target.value)}
+            placeholder="e.g., 10px or 5px 10px"
+          />
+        </div>
       </div>
-      <div>
-        <Label htmlFor="bg-color">Background Color</Label>
-        <Input
-          id="bg-color"
-          type="color"
-          value={mergedElement.style?.backgroundColor || '#ffffff'}
-          onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-        />
-      </div>
-      <div>
-        <Label htmlFor="text-align">Text Alignment</Label>
-        <Select
-          value={mergedElement.style?.textAlign || 'left'}
-          onValueChange={(value) => handleStyleChange('textAlign', value)}
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Element Header */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm flex items-center gap-2">
+                {definition?.displayName || element.type}
+                <Badge variant={element.properties?.locked ? 'destructive' : 'secondary'} className="text-xs">
+                  {element.properties?.locked ? 'Locked' : 'Editable'}
+                </Badge>
+              </CardTitle>
+              <p className="text-xs text-gray-500">Element ID: {element.id.slice(0, 8)}...</p>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePropertyChange('locked', !element.properties?.locked)}
+                title={element.properties?.locked ? 'Unlock element' : 'Lock element'}
+              >
+                <Settings className="w-3 h-3" />
+              </Button>
+              {onDelete && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={onDelete}
+                  title="Delete element"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Content Editor */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Properties</CardTitle> {/* Changed from Content to Properties */}
+        </CardHeader>
+        <CardContent>
+          {element.properties?.locked ? (
+            <p className="text-sm text-gray-500">
+              This element is locked and cannot be edited.
+            </p>
+          ) : (
+            renderContentEditor() // This now renders all property editors based on type or definition
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Style Editor - This could be merged into Properties or made dynamic */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Styling (from Properties)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {element.properties?.locked ? (
+            <p className="text-sm text-gray-500">
+              This element is locked and cannot be styled.
+            </p>
+          ) : (
+            renderStyleEditor() // This renders common style properties from element.properties
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      {definition?.quickControlActions && !element.properties?.locked && (
         >
           <SelectTrigger>
             <SelectValue />
