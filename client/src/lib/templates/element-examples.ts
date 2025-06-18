@@ -1,193 +1,118 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Template } from '../types';
-import { elementRegistry } from '../elements';
+// Import schema types
+import {
+  Template as TemplateData,
+  Section as SectionData,
+  Component as ComponentData,
+  Element as ElementData, // This is the target structure for elements
+  ComponentType,
+  ElementType,
+  EditableType,
+  SectionType
+} from '@shared/schema';
+import { elementRegistry } from '../elements'; // elementRegistry now produces Element with string ID and unified properties
 
-// Example template demonstrating the Element system
-export const elementExamplesTemplate: Template = {
-  id: 'element-examples',
-  name: 'Element System Demo',
-  description: 'Demonstrates the new Element-based component system',
+// Example template demonstrating the Element system, aligned with shared/schema.ts types
+export const elementExamplesTemplate: TemplateData = {
+  id: uuidv4(), // Template ID (string for client-side object)
+  name: 'Element System Demo Template (UUIDs)',
+  title: 'Element System Demo - UUID Version',
+  description: 'Demonstrates the Element-based component system with string UUIDs and refactored ElementRegistry usage.',
+  category: 'Examples',
   thumbnail: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=400&h=225&q=80',
-  defaultPage: {
-    templateId: 'element-examples',
-    name: 'Element System Demo',
-    globalSettings: {
-      title: 'Element System Demo',
-      subtitle: 'Showcasing modular HTML building blocks',
-      metaDescription: 'Demo template showing the Element system with editable components',
-      logo: 'https://via.placeholder.com/120x40',
-      colorScheme: {
-        primary: '#3b82f6',
-        secondary: '#6366f1',
-        accent: '#06b6d4',
+  logoUrl: 'https://via.placeholder.com/120x40',
+  colors: {
+    primary: '#3b82f6',
+    secondary: '#6366f1',
+    accent: '#06b6d4',
+  },
+  sections: [
+    {
+      id: uuidv4(), // Section ID is string
+      type: 'HeroSection' as SectionType,
+      name: 'Interactive Element Showcase',
+      editable: 'editable' as EditableType,
+      properties: {
+        sectionTitle: 'Interactive Element Demo',
+        sectionSubtitle: 'Elements below are created via the updated ElementRegistry.',
+        background: { type: 'color', color: '#eef2ff' },
       },
-    },
-    sections: [
-      {
-        id: uuidv4(),
-        name: 'Element Demo',
-        title: 'Element System Demonstration',
-        subtitle: 'Click on any element below to edit it using the new Element system.',
-        properties: {
-          backgroundStyle: 'color',
-          backgroundColor: '#f8fafc',
-          padding: {
-            vertical: 48,
-            horizontal: 24,
-          },
-        },
-        allowedComponents: ['element-container'],
-        components: [
-          {
-            id: uuidv4(),
-            type: 'element-container',
-            content: {
-              elements: [
-                // Example heading element
-                elementRegistry.createElement('heading', {
-                  content: {
-                    text: 'Welcome to the Element System',
-                    level: 'h1'
-                  },
-                  style: {
-                    textAlign: 'center',
-                    textColor: '#1f2937'
-                  }
-                }),
-                
-                // Example paragraph element
-                elementRegistry.createElement('paragraph', {
-                  content: {
-                    text: 'This demonstrates the new Element system where components are built from modular, editable HTML building blocks. Each element can be individually selected, edited, and styled.'
-                  },
-                  style: {
-                    textAlign: 'center',
-                    textColor: '#6b7280'
-                  }
-                }),
-                
-                // Example image element
-                elementRegistry.createElement('image', {
-                  content: {
-                    src: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&h=400&q=80',
-                    alt: 'Analytics dashboard',
-                    caption: 'Modern web analytics interface'
-                  },
-                  properties: {
-                    width: '100%',
-                    objectFit: 'cover'
-                  }
-                }),
-                
-                // Example button element
-                elementRegistry.createElement('button', {
-                  content: {
-                    text: 'Try Element Editing',
-                    href: '#demo'
-                  },
-                  properties: {
-                    variant: 'primary',
-                    size: 'lg'
-                  },
-                  style: {
-                    textAlign: 'center'
-                  }
-                }),
-                
-                // Example form field elements
-                elementRegistry.createElement('form-field', {
-                  content: {
-                    label: 'Your Name',
-                    placeholder: 'Enter your full name',
-                    required: true
-                  },
-                  properties: {
-                    fieldType: 'text'
-                  }
-                }),
-                
-                elementRegistry.createElement('form-field', {
-                  content: {
-                    label: 'Email Address',
-                    placeholder: 'you@example.com',
-                    required: true
-                  },
-                  properties: {
-                    fieldType: 'email'
-                  }
-                }),
-                
-                elementRegistry.createElement('form-field', {
-                  content: {
-                    label: 'Message',
-                    placeholder: 'Tell us what you think about the Element system...',
-                    required: false
-                  },
-                  properties: {
-                    fieldType: 'textarea'
-                  }
-                }),
-                
-                // Another heading for the features section
-                elementRegistry.createElement('heading', {
-                  content: {
-                    text: 'Element System Features',
-                    level: 'h2'
-                  },
-                  style: {
-                    textAlign: 'left',
-                    textColor: '#1f2937'
-                  }
-                }),
-                
-                // Feature list using paragraphs
-                elementRegistry.createElement('paragraph', {
-                  content: {
-                    text: '✓ Individual element selection and editing'
-                  },
-                  style: {
-                    textColor: '#059669'
-                  }
-                }),
-                
-                elementRegistry.createElement('paragraph', {
-                  content: {
-                    text: '✓ Floating quick controls for common actions'
-                  },
-                  style: {
-                    textColor: '#059669'
-                  }
-                }),
-                
-                elementRegistry.createElement('paragraph', {
-                  content: {
-                    text: '✓ Granular styling and content editing'
-                  },
-                  style: {
-                    textColor: '#059669'
-                  }
-                }),
-                
-                elementRegistry.createElement('paragraph', {
-                  content: {
-                    text: '✓ Type-safe element definitions and registry'
-                  },
-                  style: {
-                    textColor: '#059669'
-                  }
-                })
-              ].filter(element => element !== null)
-            },
+      spacing: { top: 48, bottom: 48, between: 24 },
+      allowedComponentTypes: ['element-container' as ComponentType],
+      components: [
+        {
+          id: uuidv4(), // Component ID is string
+          type: 'element-container' as ComponentType,
+          editable: 'editable' as EditableType,
+          elements: [
+            elementRegistry.createElement('heading', {
+              properties: { text: 'Element Showcase (UUIDs)', level: 'h1', textAlign: 'center', textColor: '#1e3a8a' }
+            }),
+            elementRegistry.createElement('paragraph', {
+              properties: { text: 'Using ElementRegistry with string UUIDs and unified properties.', textAlign: 'center', textColor: '#374151' }
+            }),
+            elementRegistry.createElement('image', {
+              properties: {
+                src: 'https://images.unsplash.com/photo-1604964432806-254d07c11f32?auto=format&fit=crop&w=800&h=400&q=80',
+                alt: 'Developer setup',
+                caption: 'Code and creativity',
+                width: '100%',
+                objectFit: 'contain',
+                padding: '10px'
+              }
+            }),
+            elementRegistry.createElement('button', {
+              properties: {
+                text: 'Explore Registry',
+                actionUrl: '#registry',
+                style: 'primary',
+                size: 'lg',
+                textAlign: 'center'
+              }
+            }),
+            elementRegistry.createElement('form-field', {
+              properties: {
+                label: 'Full Name',
+                placeholder: 'E.g., Ada Lovelace',
+                required: true,
+                fieldType: 'text'
+              }
+            }),
+            elementRegistry.createElement('form-field', {
+              properties: {
+                label: 'Contact Email',
+                placeholder: 'ada@example.com',
+                required: true,
+                fieldType: 'email'
+              }
+            }),
+            elementRegistry.createElement('form-field', {
+              properties: {
+                label: 'Your Feedback',
+                placeholder: 'Share your thoughts on the new element system...',
+                required: false,
+                fieldType: 'textarea'
+              }
+            }),
+            elementRegistry.createElement('heading', {
+              properties: { text: 'Key Refinements', level: 'h2', textAlign: 'left', textColor: '#1e3a8a' }
+            }),
+            elementRegistry.createElement('paragraph', { properties: { text: '✓ ElementRegistry creates schema-aligned elements.', textColor: '#166534' }}),
+            elementRegistry.createElement('paragraph', { properties: { text: '✓ String UUIDs for all Section/Component/Element IDs.', textColor: '#166534' }}),
+            elementRegistry.createElement('paragraph', { properties: { text: '✓ Properties object consolidates all element data.', textColor: '#166534' }}),
+          ].filter(element => element !== null) as ElementData[],
+          parameters: {
             styleOptions: {
               backgroundColor: '#ffffff',
-              padding: '2rem'
+              padding: '2rem',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
             },
-            replacingLocked: false,
-            editingLocked: false,
             usesElements: true
-          }
-        ]
-      }
-    ]
-  }
+          },
+          swappableWith: [],
+        }
+      ]
+    }
+  ]
 };

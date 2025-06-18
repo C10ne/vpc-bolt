@@ -1,18 +1,40 @@
-import { useState } from "react";
-import { Template, Section, Element } from "@shared/schema";
+import React, { useState } from "react";
+import {
+  Template as TemplateData,
+  Section as SectionData,
+  Component as ComponentData,
+  Element as ElementData
+} from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import SectionComponent from "./editor/SectionComponent";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { sectionDefinitions, SectionDefinition } from "@/lib/sections/definitions";
+import QuickEditBar from './editor/QuickEditBar';
+import MiniTextToolbar from './editor/MiniTextToolbar';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 interface EditorPanelProps {
-  template: Template;
+  template: TemplateData;
   selectedElementId: string | null;
   onSelectElement: (elementId: string | null) => void;
-  onUpdateTemplate: (updatedTemplate: Template) => void;
+  onUpdateTemplate: (updatedTemplate: TemplateData) => void;
   viewMode: "desktop" | "tablet" | "mobile";
   onChangeViewMode: (mode: "desktop" | "tablet" | "mobile") => void;
 }
+
+// Changed generateId to return string UUID
+const generateId = (): string => uuidv4();
 
 export default function EditorPanel({
   template,
@@ -23,88 +45,99 @@ export default function EditorPanel({
   onChangeViewMode,
 }: EditorPanelProps) {
   const { toast } = useToast();
-  const [draggedSection, setDraggedSection] = useState<Section | null>(null);
-  const [isDraggingOver, setIsDraggingOver] = useState<number | null>(null);
+  const [draggedSection, setDraggedSection] = useState<SectionData | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null); // Changed to string for ID
+  const [isAddSectionDialogOpen, setIsAddSectionDialogOpen] = useState(false);
 
-  const handleAddSection = () => {
-    // Show dialog to select section type
-    toast({
-      title: "Add Section",
-      description: "Section selection dialog will appear here.",
-    });
-  };
+  const handleAddSectionFromDefinition = (definition: SectionDefinition) => {
+    if (!template || !onUpdateTemplate) {
+      console.error("Template or onUpdateTemplate function is not available from props.");
+      return;
+    }
 
-  const updateSection = (sectionId: number, updatedSection: Section) => {
-    const updatedSections = template.sections.map((section) =>
-      section.id === sectionId ? updatedSection : section
-    );
+    // Default components and elements will get string UUIDs from updated newId in their definition files
+    // Or if they are created here, ensure newId() which returns string is used.
+    // The definitions files were updated to use uuidv4 for their newId functions.
+    const newDefaultComponents = definition.defaultComponents.map((comp): ComponentData => ({
+      ...comp,
+      id: generateId(), // Ensure this is string if comp.id was number from old def
+      elements: comp.elements.map((el): ElementData => ({
+        ...el,
+        id: generateId(), // Ensure this is string
+      })),
+    }));
+
+    const newSection: SectionData = {
+      id: generateId(), // String UUID
+      type: definition.type,
+      name: definition.name,
+      editable: definition.defaultConfig?.editable || 'editable',
+      properties: { ...(definition.defaultConfig?.properties || {}) },
+      spacing: definition.defaultConfig?.spacing,
+      background: definition.defaultConfig?.background,
+      allowedComponentTypes: definition.defaultConfig?.allowedComponentTypes,
+      maxComponents: definition.defaultConfig?.maxComponents,
+      minComponents: definition.defaultConfig?.minComponents,
+      components: newDefaultComponents,
+    };
     
-    onUpdateTemplate({
-      ...template,
-      sections: updatedSections,
-    });
+    const updatedSections = [...(template.sections || []), newSection];
+    onUpdateTemplate({ ...template, sections: updatedSections });
+    setIsAddSectionDialogOpen(false);
   };
 
-  const deleteSection = (sectionId: number) => {
+  // Changed sectionId parameter to string
+  const deleteSection = (sectionId: string) => {
+    if (!template || !onUpdateTemplate) {
+      console.error("Template or onUpdateTemplate function is not available from props.");
+      return;
+    }
+
+    // section.id is now string, sectionId is string. Direct comparison.
+    const sectionToDelete = template.sections.find(s => s.id === sectionId);
+
+    if (sectionToDelete && sectionToDelete.editable === 'locked-edit') {
+      toast({
+        title: "Action Denied",
+        description: `Section "${sectionToDelete.name}" is locked and cannot be deleted.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const updatedSections = template.sections.filter(
-      (section) => section.id !== sectionId
+      (section) => section.id !== sectionId // Direct string comparison
     );
-    
     onUpdateTemplate({
       ...template,
       sections: updatedSections,
     });
   };
 
-  const moveSectionUp = (sectionId: number) => {
-    const sectionIndex = template.sections.findIndex((s) => s.id === sectionId);
-    if (sectionIndex <= 0) return;
-    
-    const newSections = [...template.sections];
-    const temp = newSections[sectionIndex];
-    newSections[sectionIndex] = newSections[sectionIndex - 1];
-    newSections[sectionIndex - 1] = temp;
-    
-    onUpdateTemplate({
-      ...template,
-      sections: newSections,
-    });
-  };
-
-  const moveSectionDown = (sectionId: number) => {
-    const sectionIndex = template.sections.findIndex((s) => s.id === sectionId);
-    if (sectionIndex === -1 || sectionIndex >= template.sections.length - 1) return;
-    
-    const newSections = [...template.sections];
-    const temp = newSections[sectionIndex];
-    newSections[sectionIndex] = newSections[sectionIndex + 1];
-    newSections[sectionIndex + 1] = temp;
-    
-    onUpdateTemplate({
-      ...template,
-      sections: newSections,
-    });
-  };
-
-  const handleDragStart = (section: Section) => {
+  const handleDragStart = (section: SectionData) => {
     setDraggedSection(section);
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  // index parameter for handleDragOver and handleDrop refers to array index, not ID.
+  // isDraggingOver state should store section.id (string) if it's used to compare with section.id
+  const handleDragOver = (e: React.DragEvent, sectionIdOver: string) => {
     e.preventDefault();
-    setIsDraggingOver(index);
+    setIsDraggingOver(sectionIdOver);
   };
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: React.DragEvent, dropTargetSectionId: string) => {
     e.preventDefault();
     if (!draggedSection) return;
 
-    const dragIndex = template.sections.findIndex(s => s.id === draggedSection.id);
-    if (dragIndex === -1) return;
+    const currentSections = template.sections || [];
+    const dragIndex = currentSections.findIndex(s => s.id === draggedSection.id); // string comparison
+    const dropIndex = currentSections.findIndex(s => s.id === dropTargetSectionId); // string comparison
 
-    const newSections = [...template.sections];
-    newSections.splice(dragIndex, 1);
-    newSections.splice(dropIndex, 0, draggedSection);
+    if (dragIndex === -1 || dropIndex === -1) return;
+
+    const newSections = [...currentSections];
+    const [movedSection] = newSections.splice(dragIndex, 1);
+    newSections.splice(dropIndex, 0, movedSection);
 
     onUpdateTemplate({
       ...template,
@@ -120,34 +153,29 @@ export default function EditorPanel({
     setIsDraggingOver(null);
   };
 
-  const renderSection = (section: Section) => {
+  const renderSection = (section: SectionData) => {
+    // key={section.id} is fine as section.id is now string.
+    // findIndex is fine.
+    // const index = (template.sections || []).findIndex(s => s.id === section.id);
 
     return (
       <div
-        key={section.id}
+        key={section.id} // section.id is now string
         className={cn(
-          "border-2 border-transparent hover:border-blue-200 relative group",
-          selectedElementId === `section-${section.id}` && "border-blue-400"
+          "border-2 border-transparent hover:border-blue-200 relative group"
         )}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectElement(`section-${section.id}`);
-        }}
         draggable={true}
         onDragStart={() => handleDragStart(section)}
         onDragEnd={handleDragEnd}
-        onDragOver={(e) => handleDragOver(e, template.sections.indexOf(section))}
-        onDrop={(e) => handleDrop(e, template.sections.indexOf(section))}
+        onDragOver={(e) => handleDragOver(e, section.id)} // Pass section.id (string)
+        onDrop={(e) => handleDrop(e, section.id)}       // Pass section.id (string)
       >
-        {/* Section controls placeholder */}
-        
         <SectionComponent 
-          section={section}
-          index={template.sections.indexOf(section)}
+          section={section} // section.id is string
         />
         
-        {isDraggingOver === template.sections.indexOf(section) && (
-          <div className="border-t-2 border-primary absolute top-0 left-0 right-0"></div>
+        {isDraggingOver === section.id && ( // Compare with section.id (string)
+          <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 z-20"></div>
         )}
       </div>
     );
@@ -155,109 +183,22 @@ export default function EditorPanel({
 
   return (
     <div className="flex-1 overflow-auto bg-gray-100 relative h-full" id="editorArea">
-      {/* Top toolbar for editor */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center sticky top-0 z-10">
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-1.5">
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
             </Button>
-          </div>
         </div>
-
         <div className="flex items-center space-x-2">
-          <Button
-            variant={viewMode === "desktop" ? "default" : "outline"}
-            size="sm"
-            className={cn("px-3 py-1.5 flex items-center gap-1", 
-              viewMode === "desktop" ? "bg-primary text-white" : "")}
-            onClick={() => onChangeViewMode("desktop")}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-3.5 w-3.5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span className="hidden sm:inline">Desktop</span>
-          </Button>
-          <Button
-            variant={viewMode === "tablet" ? "default" : "outline"}
-            size="sm"
-            className={cn("px-3 py-1.5 flex items-center gap-1", 
-              viewMode === "tablet" ? "bg-primary text-white" : "")}
-            onClick={() => onChangeViewMode("tablet")}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-3.5 w-3.5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm4 14a1 1 0 100-2 1 1 0 000 2z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span className="hidden sm:inline">Tablet</span>
-          </Button>
-          <Button
-            variant={viewMode === "mobile" ? "default" : "outline"}
-            size="sm"
-            className={cn("px-3 py-1.5 flex items-center gap-1", 
-              viewMode === "mobile" ? "bg-primary text-white" : "")}
-            onClick={() => onChangeViewMode("mobile")}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-3.5 w-3.5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span className="hidden sm:inline">Mobile</span>
-          </Button>
+          <Button variant={viewMode === "desktop" ? "default" : "outline"} size="sm" className={cn("px-3", viewMode === "desktop" ? "bg-primary text-white":"")} onClick={() => onChangeViewMode("desktop")}>Desktop</Button>
+          <Button variant={viewMode === "tablet" ? "default" : "outline"} size="sm" className={cn("px-3", viewMode === "tablet" ? "bg-primary text-white":"")} onClick={() => onChangeViewMode("tablet")}>Tablet</Button>
+          <Button variant={viewMode === "mobile" ? "default" : "outline"} size="sm" className={cn("px-3", viewMode === "mobile" ? "bg-primary text-white":"")} onClick={() => onChangeViewMode("mobile")}>Mobile</Button>
         </div>
       </div>
 
-      {/* Editor canvas area */}
       <div className="p-6 flex justify-center" onClick={() => onSelectElement(null)}>
         <div 
           className={cn(
@@ -267,42 +208,51 @@ export default function EditorPanel({
             "w-[375px]"
           )}
         >
-          {/* Global template preview with editable sections */}
-          {template.sections.map((section) => renderSection(section))}
+          {(template?.sections || []).map((section) => renderSection(section))}
           
-          {template.sections.length === 0 && (
+          {(!template?.sections || template.sections.length === 0) && (
             <div className="p-12 text-center bg-gray-50">
               <h3 className="text-lg font-medium text-gray-600 mb-2">No sections added yet</h3>
               <p className="text-gray-500 mb-4">Add your first section to start building your page</p>
-              <Button onClick={handleAddSection} className="bg-primary text-white">
-                Add Section
-              </Button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Add new section floating button */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10">
-        <Button 
-          onClick={handleAddSection}
-          className="bg-primary hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center px-4 py-2"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4 mr-2"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+      <Dialog open={isAddSectionDialogOpen} onOpenChange={setIsAddSectionDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            className="bg-primary hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center px-4 py-2 fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10"
           >
-            <path
-              fillRule="evenodd"
-              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span>Add Section</span>
-        </Button>
-      </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+            <span>Add Section</span>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[600px] bg-white">
+          <DialogHeader>
+            <DialogTitle>Add New Section</DialogTitle>
+            <DialogDescription>Choose a predefined section type to add to your page.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            {sectionDefinitions.map((def) => (
+              <div
+                key={def.type} // Assuming def.type is unique enough for key
+                className="p-4 border rounded-lg hover:shadow-lg cursor-pointer flex flex-col items-start text-left hover:bg-gray-50 transition-colors"
+                onClick={() => handleAddSectionFromDefinition(def)}
+              >
+                <h3 className="font-semibold mb-1 text-gray-800">{def.name}</h3>
+                <p className="text-xs text-gray-500">{def.description}</p>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <QuickEditBar />
+      <MiniTextToolbar />
     </div>
   );
 }
