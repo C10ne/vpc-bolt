@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Template } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { templates } from "@/lib/templates";
 
 interface TemplatesPanelProps {
-  templates: Template[];
-  selectedTemplateId: number | null;
-  onSelectTemplate: (templateId: number) => void;
+  selectedTemplateId: string | undefined;
+  onSelectTemplate: (templateId: string) => void;
   showPanel: boolean;
   onTogglePanel: () => void;
 }
@@ -20,7 +20,6 @@ const categories = [
 ];
 
 export default function TemplatesPanel({
-  templates,
   selectedTemplateId,
   onSelectTemplate,
   showPanel,
@@ -140,10 +139,11 @@ export default function TemplatesPanel({
             filteredTemplates.map((template) => (
               <div key={template.id} className="mb-3 group cursor-pointer">
                 <div
-                  onClick={() => onSelectTemplate(template.id)}
+                  data-testid={`template-item-${template.id}`}
+                  onClick={() => onSelectTemplate(template.id.toString())}
                   className={cn(
                     "relative rounded overflow-hidden",
-                    selectedTemplateId === template.id
+                    selectedTemplateId === template.id.toString()
                       ? "border-2 border-primary"
                       : "border border-gray-200 hover:border-primary transition-colors"
                   )}
@@ -177,7 +177,7 @@ export default function TemplatesPanel({
                   <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-90 py-1 px-2">
                     <span className="text-xs font-medium">{template.name}</span>
                   </div>
-                  {selectedTemplateId === template.id && (
+                  {selectedTemplateId === template.id.toString() && (
                     <div className="absolute top-2 right-2">
                       <span className="bg-primary text-white text-xs px-1.5 py-0.5 rounded-sm">
                         Selected

@@ -109,7 +109,11 @@
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
     "vite": "^6.3.5",
-    "vitest": "^3.2.1"
+    "vitest": "^3.2.1",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/user-event": "^14.5.2",
+    "jsdom": "^24.1.1"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
