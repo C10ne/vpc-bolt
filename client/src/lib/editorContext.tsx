@@ -5,6 +5,7 @@ import {
   Element as SchemaElement,
   ComponentType as SchemaComponentType,
   Template as SchemaTemplate,
+  Project as SchemaProject,
 } from '@shared/schema';
 import { EditorState as AppEditorState, Page, Section, Component, ComponentType, Template } from './types';
 import { templates as staticTemplates } from './templates';
@@ -12,7 +13,8 @@ import { templates as staticTemplates } from './templates';
 export interface EditorState extends AppEditorState {
   selectedItemRect: DOMRect | null;
   currentFocusedElementId: string | null;
-  currentUserLevel: 'free' | 'pro'; // Added currentUserLevel
+  currentUserLevel: 'free' | 'pro';
+  currentProjectId: number | null; // Added currentProjectId
 }
 
 export interface ElementPath {
@@ -31,10 +33,10 @@ type EditorAction =
   | { type: 'SET_ACTIVE_TOOL'; payload: string }
   | { type: 'SET_PREVIEW_DEVICE'; payload: 'desktop' | 'tablet' | 'mobile' }
   | { type: 'SAVE_PAGE' }
-  | { type: 'HYDRATE_STATE'; payload: Page }
+  | { type: 'HYDRATE_STATE'; payload: SchemaProject } // Changed to accept Project object
   | { type: 'DELETE_SELECTED_ITEM' }
   | { type: 'UPDATE_ELEMENT_CONTENT'; payload: { path: ElementPath; newContent: string; elementType: 'Paragraph' | 'RichText' } }
-  | { type: 'TOGGLE_USER_LEVEL' }; // New action for toggling user level
+  | { type: 'TOGGLE_USER_LEVEL' };
 
 const initialState: EditorState = {
   templates: [],
@@ -51,12 +53,12 @@ const initialState: EditorState = {
   unsavedChanges: false,
   selectedItemRect: null,
   currentFocusedElementId: null,
-  currentUserLevel: 'free', // Initialize currentUserLevel
+  currentUserLevel: 'free',
+  currentProjectId: null, // Initialize currentProjectId
 };
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
-    // ... (other cases remain the same)
     case 'SELECT_TEMPLATE': {
       const templateId = action.payload;
       const availableTemplates = state.templates?.length > 0 ? state.templates : (staticTemplates as unknown as Template[]);
@@ -155,24 +157,90 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       }
       return { ...state, currentPage: newCurrentPage, unsavedChanges: true };
     }
-    case 'TOGGLE_USER_LEVEL': // New case
+    case 'TOGGLE_USER_LEVEL':
       return {
         ...state,
         currentUserLevel: state.currentUserLevel === 'free' ? 'pro' : 'free',
-        // unsavedChanges: true, // Decide if this action marks changes; typically not for user meta state
       };
     case 'SET_ACTIVE_TOOL': return { ...state, activeTool: action.payload };
     case 'SET_PREVIEW_DEVICE': return { ...state, previewDevice: action.payload };
     case 'SAVE_PAGE': return { ...state, unsavedChanges: false };
-    case 'HYDRATE_STATE':
-      return {...state, currentPage: action.payload, templateSelected: true, unsavedChanges: false, selectedSection: null, selectedComponent: null, selectedItemRect: null, currentFocusedElementId: null };
+    case 'HYDRATE_STATE': {
+      // Map Project object to Page structure
+      const project = action.payload;
+      const template = project.data as SchemaTemplate;
+      
+      // Map template to Page structure
+      const mappedPage: Page = {
+        templateId: template.id || '',
+        name: project.name || '',
+        globalSettings: {
+          title: template.globalSettings?.title || '',
+          subtitle: template.globalSettings?.subtitle || '',
+          metaDescription: template.globalSettings?.metaDescription || '',
+          logo: template.globalSettings?.logo || '',
+          colorScheme: {
+            primary: template.globalSettings?.colorScheme?.primary || '#4361ee',
+            secondary: template.globalSettings?.colorScheme?.secondary || '#3f37c9',
+            accent: template.globalSettings?.colorScheme?.accent || '#4cc9f0'
+          }
+        },
+        sections: (template.sections || []).map(section => ({
+          id: section.id,
+          name: section.name || '',
+          title: section.title,
+          subtitle: section.subtitle,
+          properties: {
+            backgroundStyle: section.properties?.backgroundStyle || 'color',
+            backgroundColor: section.properties?.backgroundColor,
+            backgroundImage: section.properties?.backgroundImage,
+            gradientStartColor: section.properties?.gradientStartColor,
+            gradientEndColor: section.properties?.gradientEndColor,
+            gradientDirection: section.properties?.gradientDirection,
+            padding: {
+              vertical: section.properties?.padding?.vertical || 0,
+              horizontal: section.properties?.padding?.horizontal || 0
+            }
+          },
+          allowedComponents: section.allowedComponents || [],
+          components: (section.components || []).map(component => ({
+            id: component.id,
+            type: component.type as ComponentType,
+            content: {
+              title: component.parameters?.title,
+              subtitle: component.parameters?.subtitle,
+              buttonText: component.parameters?.buttonText,
+              buttonLink: component.parameters?.buttonLink,
+              backgroundImage: component.parameters?.backgroundImage,
+              elements: component.elements || []
+            },
+            styleOptions: component.parameters || {},
+            replacingLocked: component.editable === 'locked-replacing',
+            editingLocked: component.editable === 'locked-edit',
+            usesElements: Boolean(component.elements && component.elements.length > 0)
+          }))
+        }))
+      };
+
+      return {
+        ...state,
+        currentPage: mappedPage,
+        currentProjectId: project.id,
+        templateSelected: true,
+        unsavedChanges: false,
+        selectedSection: null,
+        selectedComponent: null,
+        selectedItemRect: null,
+        currentFocusedElementId: null
+      };
+    }
     default:
       return state;
   }
 }
 
 export interface EditorContextType {
-  state: EditorState; // This will include currentUserLevel
+  state: EditorState;
   selectTemplate: (templateId: string) => void;
   selectSection: (sectionId: string | null, domNode: HTMLElement | null) => void;
   selectComponent: (sectionId: string, componentId: string | null, domNode: HTMLElement | null) => void;
@@ -181,7 +249,7 @@ export interface EditorContextType {
   replaceComponent: (sectionId: string, componentId: string, newType: SchemaComponentType) => void;
   deleteSelectedItem: () => void;
   updateElementContent: (path: ElementPath, newContent: string, elementType: 'Paragraph' | 'RichText') => void;
-  toggleUserLevel: () => void; // Added toggleUserLevel
+  toggleUserLevel: () => void;
   setActiveTool: (tool: string) => void;
   setPreviewDevice: (device: 'desktop' | 'tablet' | 'mobile') => void;
   savePage: () => void;
@@ -189,7 +257,7 @@ export interface EditorContextType {
   updateComponentContent: (key: string, value: any) => void;
   previewMode: boolean;
   togglePreviewMode: () => void;
-  hydrateState: (page: Page) => void;
+  hydrateState: (project: SchemaProject) => void; // Changed parameter type
 };
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -237,7 +305,7 @@ export function EditorProvider({ children }: EditorProviderProps) {
   
   const replaceComponent = useCallback((sectionId: string, componentId: string, newType: SchemaComponentType) => dispatch({ type: 'REPLACE_COMPONENT', payload: { sectionId, componentId, newType } }), []);
   const deleteSelectedItem = useCallback(() => dispatch({ type: 'DELETE_SELECTED_ITEM' }), []);
-  const toggleUserLevel = useCallback(() => dispatch({ type: 'TOGGLE_USER_LEVEL' }), []); // Added
+  const toggleUserLevel = useCallback(() => dispatch({ type: 'TOGGLE_USER_LEVEL' }), []);
   const setActiveTool = useCallback((tool: string) => dispatch({ type: 'SET_ACTIVE_TOOL', payload: tool }), []);
   const setPreviewDevice = useCallback((device: 'desktop' | 'tablet' | 'mobile') => dispatch({ type: 'SET_PREVIEW_DEVICE', payload: device }), []);
   const savePage = useCallback(() => dispatch({ type: 'SAVE_PAGE' }), []);
@@ -256,17 +324,17 @@ export function EditorProvider({ children }: EditorProviderProps) {
   }, [state]);
   
   const togglePreviewMode = useCallback(() => setPreviewMode(prev => !prev), []);
-  const hydrateState = useCallback((page: Page) => dispatch({ type: 'HYDRATE_STATE', payload: page }), []);
+  const hydrateState = useCallback((project: SchemaProject) => dispatch({ type: 'HYDRATE_STATE', payload: project }), []);
   
   const contextValue = useMemo(() => ({
     state, selectTemplate, selectSection, selectComponent, updateSection, updateComponent,
-    replaceComponent, deleteSelectedItem, updateElementContent, toggleUserLevel, // Added toggleUserLevel
+    replaceComponent, deleteSelectedItem, updateElementContent, toggleUserLevel,
     setActiveTool, setPreviewDevice, savePage, clearSelectedSection,
     updateComponentContent: legacyUpdateComponentContent,
     previewMode, togglePreviewMode, hydrateState,
   }), [
     state, selectTemplate, selectSection, selectComponent, updateSection, updateComponent,
-    replaceComponent, deleteSelectedItem, updateElementContent, toggleUserLevel, // Added toggleUserLevel
+    replaceComponent, deleteSelectedItem, updateElementContent, toggleUserLevel,
     setActiveTool, setPreviewDevice, savePage, clearSelectedSection,
     legacyUpdateComponentContent, previewMode, togglePreviewMode, hydrateState,
   ]);

@@ -32,7 +32,7 @@ export default function Header() {
 
   const publishMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/pages/publish", { id: state.currentPage.id });
+      return await apiRequest("POST", "/api/pages/publish", { id: state.currentProjectId });
     },
     onSuccess: () => {
       toast({
@@ -82,7 +82,7 @@ export default function Header() {
           </Button>
           <Button
             onClick={() => publishMutation.mutate()}
-            disabled={publishMutation.isPending || !state.currentPage.id}
+            disabled={publishMutation.isPending || !state.currentProjectId}
             className="bg-success hover:bg-green-600 text-white flex items-center gap-1"
           >
             <Upload className="h-4 w-4" />
