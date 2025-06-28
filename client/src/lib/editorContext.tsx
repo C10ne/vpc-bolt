@@ -213,21 +213,23 @@ export function EditorProvider({ children }: EditorProviderProps) {
   }, []);
   
   const updateSection = useCallback((sectionId: string, updates: Partial<SchemaSection>) => {
+    if (!state.currentPage) return;
     const currentSection = state.currentPage.sections.find(s => (s as unknown as SchemaSection).id === sectionId);
     if (!currentSection) return;
     const updatedProperties = updates.properties ? { ...currentSection.properties, ...updates.properties } : currentSection.properties;
     const updatedSectionData = { ...(currentSection as unknown as SchemaSection), ...updates, properties: updatedProperties };
     dispatch({ type: 'UPDATE_SECTION', payload: updatedSectionData });
-  }, [state.currentPage.sections]);
+  }, [state.currentPage]);
   
   const updateComponent = useCallback((sectionId: string, componentId: string, updates: Partial<SchemaComponent>) => {
+    if (!state.currentPage) return;
     const section = state.currentPage.sections.find(s => (s as unknown as SchemaSection).id === sectionId);
     if (!section) return;
     const component = section.components.find(c => (c as unknown as SchemaComponent).id === componentId);
     if (!component) return;
     const updatedComponentData = { ...(component as unknown as SchemaComponent), ...updates };
     dispatch({ type: 'UPDATE_COMPONENT', payload: { sectionId, component: updatedComponentData } });
-  }, [state.currentPage.sections]);
+  }, [state.currentPage]);
 
   const updateElementContent = useCallback((path: ElementPath, newContent: string, elementType: 'Paragraph' | 'RichText') => {
     dispatch({ type: 'UPDATE_ELEMENT_CONTENT', payload: { path, newContent, elementType } });
@@ -243,7 +245,7 @@ export function EditorProvider({ children }: EditorProviderProps) {
   
   const legacyUpdateComponentContent = useCallback((key: string, value: any) => {
     const { selectedSection: selSectionId, selectedComponent: selCompId, currentPage } = state;
-    if (!selSectionId || !selCompId) return;
+    if (!selSectionId || !selCompId || !currentPage) return;
     const section = currentPage.sections.find(s => s.id === selSectionId);
     if (!section) return;
     const componentToUpdate = section.components.find(c => c.id === selCompId);
