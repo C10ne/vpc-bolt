@@ -1,6 +1,21 @@
-import type { TemplateRecord } from '@shared/schema';
+// Mock templates data - simplified structure without database dependencies
+export interface TemplateRecord {
+  id: number;
+  name: string;
+  title: string;
+  category: string;
+  description?: string;
+  thumbnail?: string;
+  logoUrl?: string;
+  colors?: {
+    primary: string;
+    secondary: string;
+    accent?: string;
+  };
+  metadata?: Record<string, any>;
+  createdAt: Date;
+}
 
-// Mock templates data that matches the database schema
 export const templates: TemplateRecord[] = [
   {
     id: 1,

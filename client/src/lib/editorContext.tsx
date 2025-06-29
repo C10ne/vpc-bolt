@@ -1,5 +1,21 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import type { Template } from '../../../shared/schema';
+
+// Define Template type locally since we're not using shared schema anymore
+interface Template {
+  id: number;
+  name: string;
+  title: string;
+  category: string;
+  description?: string;
+  thumbnail?: string;
+  logoUrl?: string;
+  colors?: {
+    primary: string;
+    secondary: string;
+    accent?: string;
+  };
+  sections: any[];
+}
 
 interface EditorState {
   currentTemplate: Template | null;
@@ -136,11 +152,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      // Implementation for saving the template/project
-      // This would make an API call to save the current state
+      // Mock save operation - just log to console
       console.log('Saving template:', state.currentTemplate);
       
-      // Simulate API call
+      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       dispatch({ type: 'SET_LOADING', payload: false });

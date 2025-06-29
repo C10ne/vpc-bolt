@@ -1,71 +1,54 @@
 import React, { useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useEditor } from '../lib/editorContext';
-import { apiRequest } from '../lib/api';
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import Canvas from '../components/layout/Canvas';
-import type { TemplateRecord } from '../../../shared/schema';
+import { templates } from '../lib/templates';
 
 const PatternEditorPage: React.FC = () => {
   const { templateId } = useParams<{ templateId: string }>();
   const [, setLocation] = useLocation();
-  const { loadTemplate, state } = useEditor();
-
-  const { data: template, isLoading, error } = useQuery<TemplateRecord>({
-    queryKey: ['/api/templates', templateId],
-    queryFn: () => apiRequest(`/api/templates/${templateId}`),
-    enabled: !!templateId,
-  });
+  const { loadTemplate } = useEditor();
 
   useEffect(() => {
-    if (template) {
-      // Convert TemplateRecord to Template format expected by editor
-      const editorTemplate = {
-        id: template.id,
-        name: template.name,
-        title: template.title,
-        category: template.category,
-        description: template.description || '',
-        thumbnail: template.thumbnail || '',
-        logoUrl: template.logoUrl || '',
-        colors: template.colors || { primary: '#000000', secondary: '#ffffff' },
-        sections: [], // This would be populated from template data
-      };
-      loadTemplate(editorTemplate);
+    if (templateId) {
+      const template = templates.find(t => t.id === parseInt(templateId));
+      if (template) {
+        // Convert TemplateRecord to Template format expected by editor
+        const editorTemplate = {
+          id: template.id,
+          name: template.name,
+          title: template.title,
+          category: template.category,
+          description: template.description || '',
+          thumbnail: template.thumbnail || '',
+          logoUrl: template.logoUrl || '',
+          colors: template.colors || { primary: '#000000', secondary: '#ffffff' },
+          sections: [], // This would be populated from template data
+        };
+        loadTemplate(editorTemplate);
+      }
     }
-  }, [template, loadTemplate]);
+  }, [templateId, loadTemplate]);
 
   const handleBackToPatterns = () => {
     setLocation('/patterns');
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading pattern editor...</p>
-        </div>
-      </div>
-    );
-  }
+  const template = templates.find(t => t.id === parseInt(templateId || '0'));
 
-  if (error || !template) {
+  if (!template) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-destructive mb-4">Failed to load pattern</p>
+          <p className="text-destructive mb-4">Template not found</p>
           <div className="space-x-4">
             <Button onClick={handleBackToPatterns} variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Patterns
-            </Button>
-            <Button onClick={() => window.location.reload()}>
-              Try Again
             </Button>
           </div>
         </div>

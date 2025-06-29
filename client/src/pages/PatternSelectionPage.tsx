@@ -1,55 +1,24 @@
 import React from 'react';
 import { useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Loader2, Eye, Edit3 } from 'lucide-react';
-import { apiRequest } from '../lib/api';
-import type { TemplateRecord } from '../../../shared/schema';
+import { Eye, Edit3 } from 'lucide-react';
+import { templates } from '../lib/templates';
 
 const PatternSelectionPage: React.FC = () => {
   const [, setLocation] = useLocation();
-
-  const { data: templates, isLoading, error } = useQuery<TemplateRecord[]>({
-    queryKey: ['/api/templates'],
-    queryFn: () => apiRequest('/api/templates'),
-  });
 
   const handleSelectTemplate = (templateId: number) => {
     setLocation(`/editor/${templateId}`);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading patterns...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-destructive mb-4">Failed to load patterns</p>
-          <Button onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // Filter to only show the three specified templates
-  const allowedTemplates = templates?.filter(template => 
+  const allowedTemplates = templates.filter(template => 
     template.name === 'Business Template' ||
     template.name === 'Element System Demo Template' ||
     template.name === 'Showcase Template'
-  ) || [];
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
