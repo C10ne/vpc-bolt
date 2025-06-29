@@ -1,114 +1,143 @@
-import React from 'react'; // Added React import
-import { Button } from "@/components/ui/button";
-import { useEditor } from "@/lib/editorContext";
-import { apiRequest } from "@/lib/queryClient";
-import { useMutation } from "@tanstack/react-query";
-import { Save, Eye, Upload, Monitor, Tablet, Smartphone } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Monitor, 
+  Tablet, 
+  Smartphone, 
+  Eye, 
+  Save, 
+  Share2,
+  Settings,
+  Loader2
+} from 'lucide-react';
+import { useEditor } from '@/lib/editorContext';
+import { useMutation } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
-export default function Header() {
-  const { state, savePage, previewMode, togglePreviewMode } = useEditor();
+const Header: React.FC = () => {
+  const { state, togglePreviewMode, setDeviceMode, savePage } = useEditor();
   const { toast } = useToast();
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/pages", state.currentPage);
-    },
+    mutationFn: savePage,
     onSuccess: () => {
       toast({
-        title: "Saved successfully",
-        description: "Your page has been saved.",
+        title: "Saved",
+        description: "Your changes have been saved successfully.",
       });
-      savePage();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error saving page",
+        title: "Save Failed",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const publishMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/pages/publish", { id: state.currentProjectId });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Published successfully",
-        description: "Your page has been published.",
-        variant: "success",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error publishing page",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const handleSave = () => {
+    saveMutation.mutate();
+  };
+
+  const handlePublish = () => {
+    toast({
+      title: "Publishing",
+      description: "Publishing feature coming soon!",
+    });
+  };
 
   return (
-    <header className="bg-white shadow-sm">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+    <header className="border-b bg-white px-4 py-3">
+      <div className="flex items-center justify-between">
+        {/* Left Section - Title */}
         <div className="flex items-center space-x-4">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="40" height="40" rx="8" fill="#4361ee" />
-            <path d="M10 10H18V18H10V10Z" fill="white" />
-            <path d="M22 10H30V18H22V10Z" fill="white" opacity="0.8" />
-            <path d="M10 22H18V30H10V22Z" fill="white" opacity="0.8" />
-            <path d="M22 22H30V30H22V22Z" fill="white" opacity="0.6" />
-          </svg>
-          <h1 className="text-xl font-semibold text-gray-800">PageCraft Builder</h1>
+          <h1 className="text-lg font-semibold text-gray-900">
+            PageCraft Builder
+          </h1>
+          {state.currentTemplate && (
+            <Badge variant="secondary" className="text-xs">
+              {state.currentTemplate.name}
+            </Badge>
+          )}
         </div>
-        <div className="flex items-center space-x-4">
+
+        {/* Center Section - Device Controls */}
+        <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
           <Button
-            variant={previewMode ? "secondary" : "outline"}
+            variant={state.deviceMode === 'desktop' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setDeviceMode('desktop')}
+            className="h-8 w-8 p-0"
+          >
+            <Monitor className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={state.deviceMode === 'tablet' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setDeviceMode('tablet')}
+            className="h-8 w-8 p-0"
+          >
+            <Tablet className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={state.deviceMode === 'mobile' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setDeviceMode('mobile')}
+            className="h-8 w-8 p-0"
+          >
+            <Smartphone className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Right Section - Actions */}
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={togglePreviewMode}
-            className="flex items-center gap-1"
+            className="flex items-center space-x-2"
           >
             <Eye className="h-4 w-4" />
-            <span>{previewMode ? "Edit" : "Preview"}</span>
+            <span>{state.previewMode ? 'Edit' : 'Preview'}</span>
           </Button>
+
           <Button
-            onClick={() => saveMutation.mutate()}
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="flex items-center gap-1"
+            className="flex items-center space-x-2"
           >
-            <Save className="h-4 w-4" />
+            {saveMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             <span>Save</span>
           </Button>
+
           <Button
-            onClick={() => publishMutation.mutate()}
-            disabled={publishMutation.isPending || !state.currentProjectId}
-            className="bg-success hover:bg-green-600 text-white flex items-center gap-1"
+            size="sm"
+            onClick={handlePublish}
+            disabled={!state.currentTemplate?.id}
+            className="flex items-center space-x-2"
           >
-            <Upload className="h-4 w-4" />
+            <Share2 className="h-4 w-4" />
             <span>Publish</span>
           </Button>
-          <div className="flex items-center space-x-2"> {/* Added device selection buttons */}
-            <Button className="p-1">
-              <Monitor className="h-5 w-5"/>
-            </Button>
-            <Button className="p-1">
-              <Tablet className="h-5 w-5"/>
-            </Button>
-            <Button className="p-1">
-              <Smartphone className="h-5 w-5"/>
-            </Button>
-          </div>
-          <div className="relative">
-            <button className="flex items-center space-x-2 text-gray-700">
-              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-primary">
-                JS
-              </div>
-              <span className="hidden md:inline">Jane Smith</span>
-            </button>
-          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </header>
   );
-}
+};
+
+export default Header;
