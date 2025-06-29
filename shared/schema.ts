@@ -1,18 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-
-// User model
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
+// Type definitions for elements, components, sections, and templates
 
 // Element types
 export type ElementType = 
@@ -60,57 +46,7 @@ export type EditableType =
   | "locked-replacing" // Component cannot be swapped/replaced; its internal elements *can* be edited.
   | "locked-edit"; // Internal elements of the component *cannot* be edited; the component itself *can* be swapped/replaced (unless its parent section also imposes replacement restrictions).
 
-// Templates table
-export const templates = pgTable("templates", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  category: text("category").notNull(),
-  thumbnail: text("thumbnail"),
-  title: text("title").notNull(),
-  logoUrl: text("logo_url"),
-  colors: jsonb("colors").$type<{
-    primary: string;
-    secondary: string;
-    accent?: string;
-  }>(),
-  metadata: jsonb("metadata").$type<{
-    author?: string;
-    tags?: string[];
-    createdAt?: string;
-  }>(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
-export const insertTemplateSchema = createInsertSchema(templates).pick({
-  name: true,
-  description: true,
-  category: true,
-  thumbnail: true,
-  title: true,
-  logoUrl: true,
-  colors: true,
-  metadata: true,
-});
-
-// Projects table
-export const projects = pgTable("projects", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  userId: integer("user_id").references(() => users.id),
-  templateId: integer("template_id").references(() => templates.id),
-  data: jsonb("data").$type<Template>(),
-  lastSaved: timestamp("last_saved").defaultNow(),
-});
-
-export const insertProjectSchema = createInsertSchema(projects).pick({
-  name: true,
-  userId: true,
-  templateId: true,
-  data: true,
-});
-
-// Type definitions for elements, components, sections, and templates
 
 export interface Element {
   id: string; // Changed to string for UUIDs
@@ -168,11 +104,18 @@ export interface Template {
   sections: Section[];
 }
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// User type for client-side use
+export interface User {
+  id: number;
+  username: string;
+}
 
-export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
-export type TemplateRecord = typeof templates.$inferSelect;
-
-export type InsertProject = z.infer<typeof insertProjectSchema>;
-export type Project = typeof projects.$inferSelect;
+// Project type for client-side use
+export interface Project {
+  id: number;
+  name: string;
+  userId: number;
+  templateId: number;
+  data: Template;
+  lastSaved: Date;
+}
