@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useEditor } from '@/lib/editorContext';
-import { apiRequest } from '@/lib/api';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import Canvas from '@/components/layout/Canvas';
-import type { TemplateRecord } from '@shared/schema';
+import { useEditor } from '../lib/editorContext';
+import { apiRequest } from '../lib/api';
+import Header from '../components/layout/Header';
+import Sidebar from '../components/layout/Sidebar';
+import Canvas from '../components/layout/Canvas';
+import type { TemplateRecord } from '../../../shared/schema';
 
 const PatternEditorPage: React.FC = () => {
   const { templateId } = useParams<{ templateId: string }>();

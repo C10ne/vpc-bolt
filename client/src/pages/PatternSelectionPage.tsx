@@ -1,12 +1,12 @@
 import React from 'react';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 import { Loader2, Eye, Edit3 } from 'lucide-react';
-import { apiRequest } from '@/lib/api';
-import type { TemplateRecord } from '@shared/schema';
+import { apiRequest } from '../lib/api';
+import type { TemplateRecord } from '../../../shared/schema';
 
 const PatternSelectionPage: React.FC = () => {
   const [, setLocation] = useLocation();

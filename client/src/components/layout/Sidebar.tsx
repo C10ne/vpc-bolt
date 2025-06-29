@@ -1,8 +1,8 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
 import { 
   Layers, 
   Settings, 
@@ -13,7 +13,7 @@ import {
   Trash2,
   Edit3
 } from 'lucide-react';
-import { useEditor } from '@/lib/editorContext';
+import { useEditor } from '../../lib/editorContext';
 
 const Sidebar: React.FC = () => {
   const { state } = useEditor();

@@ -1,10 +1,10 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Router, Route, Switch } from 'wouter';
-import { Toaster } from '@/components/ui/toaster';
-import { EditorProvider } from '@/lib/editorContext';
-import PatternSelectionPage from '@/pages/PatternSelectionPage';
-import PatternEditorPage from '@/pages/PatternEditorPage';
+import { Toaster } from './components/ui/toaster';
+import { EditorProvider } from './lib/editorContext';
+import PatternSelectionPage from './pages/PatternSelectionPage';
+import PatternEditorPage from './pages/PatternEditorPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {

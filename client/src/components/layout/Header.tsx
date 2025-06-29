@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import { 
   Monitor, 
   Tablet, 
@@ -11,9 +11,9 @@ import {
   Settings,
   Loader2
 } from 'lucide-react';
-import { useEditor } from '@/lib/editorContext';
+import { useEditor } from '../../lib/editorContext';
 import { useMutation } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../../hooks/use-toast';
 
 const Header: React.FC = () => {
   const { state, togglePreviewMode, setDeviceMode, savePage } = useEditor();

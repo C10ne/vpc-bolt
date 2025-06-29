@@ -1,7 +1,7 @@
 import React from 'react';
-import { useEditor } from '@/lib/editorContext';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useEditor } from '../../lib/editorContext';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
 import { Plus, Image, Type, Layout } from 'lucide-react';
 
 const Canvas: React.FC = () => {
