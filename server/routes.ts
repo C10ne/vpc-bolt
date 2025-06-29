@@ -2,12 +2,15 @@ import express, { Request, Response } from 'express';
 import { storage } from './storage';
 import { insertTemplateSchema, insertProjectSchema } from '@shared/schema';
 import { ZodError } from 'zod';
+import { templates } from '../client/src/lib/templates';
 
 export function registerRoutes(app: express.Application) {
   // Templates routes
   app.get('/api/templates', async (req: Request, res: Response) => {
     try {
-      const templates = await storage.getTemplates();
+      // For now, return mock data since we don't have a database set up
+      // In production, this would use: const templates = await storage.getTemplates();
+      console.log('GET /api/templates - returning mock data');
       res.json(templates);
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -22,11 +25,13 @@ export function registerRoutes(app: express.Application) {
         return res.status(400).json({ message: 'Invalid template ID' });
       }
 
-      const template = await storage.getTemplate(id);
+      // For now, return mock data
+      const template = templates.find(t => t.id === id);
       if (!template) {
         return res.status(404).json({ message: 'Template not found' });
       }
 
+      console.log(`GET /api/templates/${id} - returning mock data`);
       res.json(template);
     } catch (error) {
       console.error('Error fetching template:', error);
@@ -196,5 +201,10 @@ export function registerRoutes(app: express.Application) {
       console.error('Error exporting template:', error);
       res.status(500).json({ message: 'Failed to export template' });
     }
+  });
+
+  // Health check endpoint
+  app.get('/api/health', (req: Request, res: Response) => {
+    res.json({ status: 'ok', message: 'API server is running' });
   });
 }
